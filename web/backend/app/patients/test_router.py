@@ -9,6 +9,7 @@ from app.conftest import (
     AUTH_URL,
     PATIENTS_URL,
     FakePatientRepository,
+    make_history_event,
     make_patient,
     make_serum_test,
 )
@@ -26,7 +27,7 @@ from app.patients.services import PatientService
 
 PATIENT_FIELDS = {
     "id", "patient_id", "firstname", "lastname", "birth", "gender", "city", "country",
-    "created_at", "serum_tests",
+    "created_at", "serum_tests", "history",
 }  # fmt: skip
 PAGE_FIELDS = {"items", "total", "page", "page_size"}
 
@@ -187,6 +188,28 @@ def test_a_patient_includes_serum_tests_linked_by_patient_id(
             "dq10": 1870,
             "dq10_output": 1,
             "profile": "C",
+        }
+    ]
+
+
+def test_a_patient_includes_history_linked_by_patient_id(
+    logged_in: TestClient, repository: FakePatientRepository
+) -> None:
+    patient = repository.patients[0]
+    patient.patient_id = "HIS-00355"
+    patient.history = [make_history_event(patient)]
+
+    body = logged_in.get(f"{PATIENTS_URL}/{patient.id}").json()
+
+    assert body["patient_id"] == "HIS-00355"
+    assert body["history"] == [
+        {
+            "id": str(patient.history[0].id),
+            "patient_id": "HIS-00355",
+            "kind": "graft",
+            "title": "Greffe rénale",
+            "detail": "Donneur décédé · ABO compatible · exemple fictif",
+            "occurred_on": "2015-08-18",
         }
     ]
 

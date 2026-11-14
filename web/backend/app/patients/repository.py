@@ -11,6 +11,7 @@ from sqlalchemy.orm import InstrumentedAttribute, selectinload
 from app.constants.pagination import SortOrder
 from app.constants.patients import Gender, PatientSortField
 from app.core.search import contains, equals_ignoring_case
+from app.patient_history.entity import PatientHistory  # noqa: F401 — enregistre la relation
 from app.patients.entity import Patient
 from app.serum_tests.entity import SerumTest  # noqa: F401 — enregistre la relation
 
@@ -81,7 +82,7 @@ class PatientRepository:
         rows = await self._session.scalars(
             select(Patient)
             .where(*conditions)
-            .options(selectinload(Patient.serum_tests))
+            .options(selectinload(Patient.serum_tests), selectinload(Patient.history))
             .order_by(direction.nulls_last(), Patient.id)  # `id` : ordre stable entre deux pages
             .offset(criteria.offset)
             .limit(criteria.limit)
@@ -92,7 +93,7 @@ class PatientRepository:
         return await self._session.scalar(
             select(Patient)
             .where(Patient.id == patient_id)
-            .options(selectinload(Patient.serum_tests))
+            .options(selectinload(Patient.serum_tests), selectinload(Patient.history))
         )
 
     async def existing_patient_ids(self, patient_ids: Collection[str]) -> set[str]:

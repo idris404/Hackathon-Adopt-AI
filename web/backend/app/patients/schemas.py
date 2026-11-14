@@ -11,6 +11,7 @@ from app.constants.pagination import (
     SEARCH_MAX_LENGTH,
     SortOrder,
 )
+from app.constants.patient_history import HistoryKind
 from app.constants.patients import (
     CITY_MAX_LENGTH,
     COUNTRY_MAX_LENGTH,
@@ -42,11 +43,27 @@ class SerumTestRead(BaseModel):
     profile: str
 
 
-class PatientRead(BaseModel):
-    """Sortie : un patient et ses tests sériques.
+class PatientHistoryRead(BaseModel):
+    """Un événement du parcours. Lié au patient par `patient_id` (« HIS-00355 »).
 
-    `id` est son UUID, `patient_id` son identifiant fonctionnel unique. `serum_tests` est
-    vide quand aucun historique n'a été seedé pour ce `patient_id`.
+    Textes fictifs de démonstration, pas des données cliniques.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    patient_id: str
+    kind: HistoryKind
+    title: str
+    detail: str
+    occurred_on: date
+
+
+class PatientRead(BaseModel):
+    """Sortie : un patient, ses tests sériques et son historique d'événements.
+
+    `id` est son UUID, `patient_id` son identifiant fonctionnel unique. `serum_tests` et
+    `history` sont vides quand rien n'a été seedé pour ce `patient_id`.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -61,6 +78,7 @@ class PatientRead(BaseModel):
     country: str
     created_at: datetime
     serum_tests: list[SerumTestRead] = []
+    history: list[PatientHistoryRead] = []
 
 
 class PatientListQuery(BaseModel):

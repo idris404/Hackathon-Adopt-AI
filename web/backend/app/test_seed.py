@@ -6,15 +6,18 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.conftest import (
+    FakePatientHistoryRepository,
     FakePatientRepository,
     FakeSerumTestRepository,
     FakeSyntheticPatientRepository,
     fake_seed_rows,
     write_seed_csv,
 )
+from app.constants.patient_history import DEMO_PATIENTS, HISTORY_EVENTS
 from app.constants.seed import SeedStage
-from app.patients.seed import PatientSeedReport, patient_uuid_for
 from app.core.database import Base
+from app.patient_history.seed import HistorySeedReport
+from app.patients.seed import PatientSeedReport, patient_uuid_for
 from app.seed import TABLES, SeedReport, describe, find_outdated_tables, parse_args, run_seed
 from app.serum_tests.seed import SerumSeedReport
 from app.synthetic_patients.seed import SyntheticSeedReport
@@ -22,6 +25,7 @@ from app.synthetic_patients.seed import SyntheticSeedReport
 pytestmark = pytest.mark.anyio
 
 ROWS = 4
+HISTORY_ROWS = len(DEMO_PATIENTS) * len(HISTORY_EVENTS)
 
 
 @pytest.fixture
@@ -42,6 +46,11 @@ def synthetic() -> FakeSyntheticPatientRepository:
 @pytest.fixture
 def serum() -> FakeSerumTestRepository:
     return FakeSerumTestRepository()
+
+
+@pytest.fixture
+def history() -> FakePatientHistoryRepository:
+    return FakePatientHistoryRepository()
 
 
 def serum_row(patient_id: str, test_date: str = "2017-12-09") -> dict[str, str]:
@@ -78,14 +87,20 @@ async def test_the_full_seed_creates_the_patients_then_their_synthetic_patients(
     patients: FakePatientRepository,
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
 ) -> None:
-    report = await run_seed(csv_path, patients, synthetic, serum, serum_csv_path=serum_csv)
+    report = await run_seed(
+        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv
+    )
 
     assert report.patients == PatientSeedReport(read=ROWS, inserted=ROWS)
     assert report.synthetic_patients == SyntheticSeedReport(
         read=ROWS, inserted=ROWS, without_patient=0
     )
     assert report.serum_tests == SerumSeedReport(read=2, inserted=1, without_patient=1)
+    assert report.patient_history == HistorySeedReport(
+        read=HISTORY_ROWS, inserted=0, without_patient=HISTORY_ROWS
+    )
     # Chaque patient synthétique pointe, par `patient_id`, vers un patient créé par la première étape.
     created = {v["patient_id"] for v in patients.stored.values()}
     assert {v["patient_id"] for v in synthetic.stored.values()} == created
@@ -97,14 +112,17 @@ async def test_only_patients_leaves_the_synthetic_patients_alone(
     patients: FakePatientRepository,
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
 ) -> None:
-    report = await run_seed(csv_path, patients, synthetic, serum, SeedStage.PATIENTS)
+    report = await run_seed(csv_path, patients, synthetic, serum, history, SeedStage.PATIENTS)
 
     assert report.synthetic_patients is None
     assert report.serum_tests is None
+    assert report.patient_history is None
     assert len(patients.stored) == ROWS
     assert synthetic.stored == {}
     assert serum.stored == {}
+    assert history.stored == {}
 
 
 async def test_only_synthetic_starts_from_the_patients_already_there(
@@ -112,10 +130,13 @@ async def test_only_synthetic_starts_from_the_patients_already_there(
     patients: FakePatientRepository,
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
 ) -> None:
-    await run_seed(csv_path, patients, synthetic, serum, SeedStage.PATIENTS)
+    await run_seed(csv_path, patients, synthetic, serum, history, SeedStage.PATIENTS)
 
-    report = await run_seed(csv_path, patients, synthetic, serum, SeedStage.SYNTHETIC_PATIENTS)
+    report = await run_seed(
+        csv_path, patients, synthetic, serum, history, SeedStage.SYNTHETIC_PATIENTS
+    )
 
     assert report.patients is None
     assert report.synthetic_patients == SyntheticSeedReport(
@@ -128,8 +149,11 @@ async def test_only_synthetic_without_patients_inserts_nothing(
     patients: FakePatientRepository,
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
 ) -> None:
-    report = await run_seed(csv_path, patients, synthetic, serum, SeedStage.SYNTHETIC_PATIENTS)
+    report = await run_seed(
+        csv_path, patients, synthetic, serum, history, SeedStage.SYNTHETIC_PATIENTS
+    )
 
     assert report.synthetic_patients == SyntheticSeedReport(
         read=ROWS, inserted=0, without_patient=ROWS
@@ -143,16 +167,22 @@ async def test_replaying_the_full_seed_changes_nothing(
     patients: FakePatientRepository,
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
 ) -> None:
-    await run_seed(csv_path, patients, synthetic, serum, serum_csv_path=serum_csv)
+    await run_seed(csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv)
 
-    second = await run_seed(csv_path, patients, synthetic, serum, serum_csv_path=serum_csv)
+    second = await run_seed(
+        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv
+    )
 
     assert second.patients == PatientSeedReport(read=ROWS, inserted=0)
     assert second.synthetic_patients == SyntheticSeedReport(
         read=ROWS, inserted=0, without_patient=0
     )
     assert second.serum_tests == SerumSeedReport(read=2, inserted=0, without_patient=1)
+    assert second.patient_history == HistorySeedReport(
+        read=HISTORY_ROWS, inserted=0, without_patient=HISTORY_ROWS
+    )
     assert patient_uuid_for("P-0") in patients.stored
     assert len(synthetic.stored) == ROWS
 
@@ -175,6 +205,14 @@ def test_the_serum_report_counts_rows_without_a_patient() -> None:
     )[0]
 
     assert "4 lignes lues, 3 insérés, 0 déjà présents, 1 sans patient" in line
+
+
+def test_the_history_report_counts_events_without_a_patient() -> None:
+    line = describe(
+        SeedReport(None, None, None, HistorySeedReport(read=7, inserted=7, without_patient=0))
+    )[0]
+
+    assert "7 événements, 7 insérés, 0 déjà présents, 0 sans patient" in line
 
 
 def test_a_stage_that_did_not_run_is_not_reported() -> None:

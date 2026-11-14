@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.constants.pagination import SortOrder
 from app.constants.patients import Gender, PatientSortField
+from app.patient_history.entity import PatientHistory
 from app.patients.entity import Patient
 from app.patients.repository import PatientCriteria, PatientRepository
 from app.serum_tests.entity import SerumTest
@@ -46,6 +47,7 @@ async def session() -> AsyncIterator[AsyncSession]:
     async with engine.begin() as connection:
         await connection.run_sync(Patient.__table__.create)
         await connection.run_sync(SerumTest.__table__.create)
+        await connection.run_sync(PatientHistory.__table__.create)
     async with async_sessionmaker(engine, expire_on_commit=False)() as session:
         session.add_all(
             [

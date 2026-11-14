@@ -124,7 +124,7 @@ Détail du mécanisme (cookie, Argon2id, durée de session) : `CLAUDE.md`, secti
 
 ## Patients
 
-Table `patients` : identité uniquement. Les prénoms, noms, villes et pays sont **fictifs** ([D-14](api-decisions.md#d-14--identités-fictives-et-déterministes)). Chaque patient embarque ses tests sériques (`serum_tests`), liés par `patient_id`. La liste est vide si aucun historique n'a été seedé pour lui.
+Table `patients` : identité uniquement. Les prénoms, noms, villes et pays sont **fictifs** ([D-14](api-decisions.md#d-14--identités-fictives-et-déterministes)). Chaque patient embarque ses tests sériques (`serum_tests`) et son historique d'événements (`history`), liés par `patient_id`. Ces listes sont vides si rien n'a été seedé pour lui.
 
 L'historique vient de `data-model/data/serum_test_history.csv`. Ce sont des valeurs **synthétiques** de démonstration, pas des résultats biologiques cliniques. `*_output` vaut `1` si la valeur de l'antigène est ≥ 500, sinon `0`.
 
@@ -141,6 +141,18 @@ L'historique vient de `data-model/data/serum_test_history.csv`. Ce sont des vale
 
 Les tests d'un patient sont triés par `test_date` croissante.
 
+L'historique d'événements (`history`) n'est pas lu dans un CSV. Il est seedé pour dix patients de démonstration, dont les UUID listés sont ceux de `patients_synthetiques.id` (pas l'UUID d'URL). La liaison se fait par `patient_id` (`HIS-00055`, `SYN-0038`, `HIS-00355`, `HIS-00073`, `HIS-00407`, `SYN-0712`, `HIS-00584`, `HIS-00485`, `HIS-00047`, `HIS-00230`). Les textes sont des **exemples fictifs**, pas des données cliniques. Les dates sont calées sur la date de greffe du CSV. Les événements d'un patient sont triés par `occurred_on` croissante.
+
+### Objet `PatientHistory`
+
+| Champ | Type | Remarque |
+| --- | --- | --- |
+| `id` | UUID | Déduit de `patient_id` + code d'événement |
+| `patient_id` | texte | Identifiant fonctionnel du patient (ex. `HIS-00355`) |
+| `kind` | `illness` \| `accident` \| `transfusion` \| `preop` \| `graft` \| `postop` \| `consultation` | |
+| `title`, `detail` | texte | Libellés fictifs (« Greffe rénale », « Accident », « Transfusion », « Autre pathologie », …) |
+| `occurred_on` | date ISO | |
+
 ### Objet `Patient`
 
 | Champ | Type | Remarque |
@@ -152,7 +164,8 @@ Les tests d'un patient sont triés par `test_date` croissante.
 | `gender` | `M` \| `F` | |
 | `city`, `country` | texte | |
 | `created_at` | date-heure ISO | |
-| `serum_tests` | liste de `SerumTest` | `[]` si le patient n'a pas d'historique |
+| `serum_tests` | liste de `SerumTest` | `[]` si le patient n'a pas de tests sériques |
+| `history` | liste de `PatientHistory` | `[]` si le patient n'est pas dans les dix de démonstration |
 
 ### `GET /patients`
 
@@ -166,11 +179,11 @@ Liste paginée. Paramètres, en plus de la pagination ci-dessus :
 | `birth_from`, `birth_to` | date ISO | Bornes **incluses** sur `birth`. Les patients sans date de naissance sont exclus dès qu'une borne est donnée. `birth_from` > `birth_to` → `422` |
 | `sort_by` | `patient_id` \| `firstname` \| `lastname` \| `birth` \| `gender` \| `city` \| `country` \| `created_at` | Défaut : `lastname` |
 
-Réponse `200` : `{items: [Patient], total, page, page_size}`. Chaque `Patient` contient `serum_tests`. Erreurs : `401`, `422`.
+Réponse `200` : `{items: [Patient], total, page, page_size}`. Chaque `Patient` contient `serum_tests` et `history`. Erreurs : `401`, `422`.
 
 ### `GET /patients/{id}`
 
-Un patient par son UUID, avec `serum_tests`. `200` : un `Patient`. Erreurs : `401`, `404 PATIENT_NOT_FOUND`, `422` (`id` n'est pas un UUID ; un `patient_id` comme `HIS-00355` n'est **pas** accepté ici).
+Un patient par son UUID, avec `serum_tests` et `history`. `200` : un `Patient`. Erreurs : `401`, `404 PATIENT_NOT_FOUND`, `422` (`id` n'est pas un UUID ; un `patient_id` comme `HIS-00355` n'est **pas** accepté ici).
 
 ---
 

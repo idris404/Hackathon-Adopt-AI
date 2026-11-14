@@ -24,7 +24,7 @@ async def list_patients(
     query: Annotated[PatientListQuery, Query()],
     service: PatientService = Depends(get_patient_service),
 ) -> Page[PatientRead]:
-    """Liste paginée, chaque patient avec ses tests sériques.
+    """Liste paginée, chaque patient avec ses tests sériques et son historique.
 
     Recherche (`search`), filtres, tri (`sort_by`, `sort_order`) : côté serveur.
     """

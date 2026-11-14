@@ -66,6 +66,24 @@ PYTHONPATH=src python3 -m hla_data_model.generator \
 The generator never produces a score, risk category, interpretation, decision,
 expected restitution, or performance label.
 
+## Patient profile v0.2
+
+The source profile now keeps the following facts explicitly and without medical
+interpretation:
+
+- age and sex at birth;
+- pregnancy history and transfusion history;
+- diabetes, hypertension, and autoimmune disease;
+- dialysis status and known start date;
+- source suspicion-of-rejection flag, which is not a diagnosis;
+- kidney workflow status and registration date;
+- previous transplant history;
+- CAR-T treatments and therapeutic-antibody treatments as separate histories.
+
+Sex, dialysis, rejection suspicion, and organ context are copied into the
+restitution as non-scored context. They cannot silently affect the profile
+score. Pregnancy, CAR-T, and therapeutic-antibody rules remain `pending_review`.
+
 The project has no runtime dependency outside the Python standard library.
 
 ## Current acceptance criteria

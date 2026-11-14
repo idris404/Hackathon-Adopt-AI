@@ -99,6 +99,30 @@ class ScenarioValidationTests(unittest.TestCase):
         self.assertEqual(restitution["review_status"], "human_review_required")
         validate_scenario_pair(source, restitution)
 
+    def test_non_scored_profile_context_must_preserve_source_values(self) -> None:
+        source, restitution = load_scenario("complete_case")
+        invalid = deepcopy(restitution)
+        invalid["profile"]["context"]["dialysis"]["status"] = "not_on_dialysis"
+
+        with self.assertRaisesRegex(ValidationError, "must preserve the source value"):
+            validate_scenario_pair(source, invalid)
+
+    def test_pregnancy_status_must_match_count(self) -> None:
+        source, restitution = load_scenario("complete_case")
+        invalid = deepcopy(source)
+        invalid["patient_profile"]["pregnancy_history"]["status"] = "multiple"
+
+        with self.assertRaisesRegex(ValidationError, "inconsistent with count"):
+            validate_scenario_pair(invalid, restitution)
+
+    def test_future_rejection_suspicion_is_rejected(self) -> None:
+        source, restitution = load_scenario("contradictory_profile_case")
+        invalid = deepcopy(source)
+        invalid["patient_profile"]["rejection_suspicion"]["observed_at"] = "2026-11-15T09:00:00Z"
+
+        with self.assertRaisesRegex(ValidationError, "occurs after evaluation_time"):
+            validate_scenario_pair(invalid, restitution)
+
 
 class GeneratorTests(unittest.TestCase):
     def test_generator_is_deterministic_and_sources_are_valid(self) -> None:
@@ -119,6 +143,12 @@ class GeneratorTests(unittest.TestCase):
             "triggered_rules",
         ):
             self.assertNotIn(forbidden_key, serialized)
+
+        for source in generated:
+            profile = source["patient_profile"]
+            self.assertIn("car_t_treatments", profile)
+            self.assertIn("therapeutic_antibody_treatments", profile)
+            self.assertNotIn("antibody_based_treatments", profile)
 
     def test_different_seed_changes_generated_sources(self) -> None:
         self.assertNotEqual(

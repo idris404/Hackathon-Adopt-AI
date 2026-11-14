@@ -7,6 +7,12 @@
     "score_status": "pending_review",
     "proposed_risk_category": "uncertain",
     "category_status": "pending_review",
+    "context": {
+      "sex_at_birth": {"availability": "known", "value": "female"},
+      "dialysis": {"availability": "known", "status": "not_on_dialysis", "started_at": null},
+      "rejection_suspicion": {"availability": "known", "value": false, "observed_at": "2026-11-13T09:00:00Z"},
+      "organ_context": {"availability": "known", "target_organ": "kidney", "status": "follow_up", "registration_date": "2018-05-22"}
+    },
     "factors": [
       {"factor_id": "PF-01", "availability": "missing", "source_value": null, "contribution": null, "rule_status": "pending_review", "justification": "Age is missing and must not be interpreted as zero."},
       {"factor_id": "PF-02", "availability": "known", "source_value": 1, "contribution": null, "rule_status": "pending_review", "justification": "Pregnancy rule awaits Ahmed's validation."},

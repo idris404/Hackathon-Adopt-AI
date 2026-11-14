@@ -17,7 +17,7 @@
   "properties": {
     "case_id": {"type": "string", "pattern": "^SYN-CASE-[0-9]{3}$"},
     "synthetic": {"const": true},
-    "schema_version": {"const": "0.1.0"},
+    "schema_version": {"const": "0.2.0"},
     "phase": {"enum": ["pre_transplant", "post_transplant"]},
     "evaluation_time": {"type": "string", "format": "date-time"},
     "patient_profile": {
@@ -25,17 +25,41 @@
       "additionalProperties": false,
       "required": [
         "age",
+        "sex_at_birth",
         "pregnancy_history",
         "transfusion_history",
         "diabetes",
         "hypertension",
         "autoimmune_disease",
+        "dialysis",
+        "rejection_suspicion",
+        "organ_context",
         "previous_transplants",
-        "antibody_based_treatments"
+        "car_t_treatments",
+        "therapeutic_antibody_treatments"
       ],
       "properties": {
         "age": {"$ref": "#/$defs/nullableNonNegativeIntegerObservation"},
-        "pregnancy_history": {"$ref": "#/$defs/countObservation"},
+        "sex_at_birth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "value"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "value": {"enum": ["female", "male", "intersex", null]}
+          }
+        },
+        "pregnancy_history": {
+          "allOf": [
+            {"$ref": "#/$defs/countObservation"},
+            {
+              "type": "object",
+              "properties": {
+                "status": {"enum": ["none", "one", "multiple", "unknown"]}
+              }
+            }
+          ]
+        },
         "transfusion_history": {
           "allOf": [
             {"$ref": "#/$defs/countObservation"},
@@ -50,6 +74,37 @@
         "diabetes": {"$ref": "#/$defs/nullableBooleanObservation"},
         "hypertension": {"$ref": "#/$defs/nullableBooleanObservation"},
         "autoimmune_disease": {"$ref": "#/$defs/nullableBooleanObservation"},
+        "dialysis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "status", "started_at"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "status": {"enum": ["not_on_dialysis", "on_dialysis", "unknown"]},
+            "started_at": {"type": ["string", "null"], "format": "date"}
+          }
+        },
+        "rejection_suspicion": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "value", "observed_at"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "value": {"type": ["boolean", "null"]},
+            "observed_at": {"type": ["string", "null"], "format": "date-time"}
+          }
+        },
+        "organ_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "target_organ", "status", "registration_date"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "target_organ": {"const": "kidney"},
+            "status": {"enum": ["waiting_list", "suspended", "transplanted", "follow_up", "unknown"]},
+            "registration_date": {"type": ["string", "null"], "format": "date"}
+          }
+        },
         "previous_transplants": {
           "type": "object",
           "additionalProperties": false,
@@ -59,7 +114,16 @@
             "events": {"type": "array", "items": {"type": "object"}}
           }
         },
-        "antibody_based_treatments": {
+        "car_t_treatments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "events"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "events": {"type": "array", "items": {"type": "object"}}
+          }
+        },
+        "therapeutic_antibody_treatments": {
           "type": "object",
           "additionalProperties": false,
           "required": ["availability", "events"],
@@ -140,7 +204,8 @@
         "availability": {"$ref": "#/$defs/availability"},
         "count": {"type": ["integer", "null"], "minimum": 0},
         "dates": {"type": "array", "items": {"type": "string", "format": "date"}},
-        "frequency": {"type": ["string", "null"]}
+        "frequency": {"type": ["string", "null"]},
+        "status": {"type": "string"}
       }
     },
     "nullableBooleanObservation": {

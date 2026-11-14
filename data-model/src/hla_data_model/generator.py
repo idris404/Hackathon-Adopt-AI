@@ -44,8 +44,23 @@ def generate_source_cases(count: int, seed: int = DEFAULT_SEED) -> list[dict[str
         case_number = 100 + case_offset
         age_value = rng.choice([None, 35, 48, 52, 65, 66, 72])
         pregnancy_count = rng.choice([0, 0, 1, 2])
+        pregnancy_status = {0: "none", 1: "one", 2: "multiple"}[pregnancy_count]
+        sex_at_birth = "female" if pregnancy_count > 0 else rng.choice(["female", "male", "intersex"])
         transfusion_count = rng.choice([0, 0, 1, 2])
         transfusion_frequency = {0: "none", 1: "single", 2: "multiple"}[transfusion_count]
+        phase = rng.choice(["pre_transplant", "post_transplant"])
+        dialysis_status = rng.choice(["not_on_dialysis", "on_dialysis"])
+        rejection_suspicion = (
+            {"availability": "known", "value": rng.choice([False, False, True]), "observed_at": "2026-10-15T09:00:00Z"}
+            if phase == "post_transplant"
+            else {"availability": "not_applicable", "value": None, "observed_at": None}
+        )
+        car_t_events = [] if rng.random() < 0.9 else [{"treatment_code": "SYN-CAR-T", "start_date": "2025-04-10"}]
+        antibody_events = (
+            []
+            if rng.random() < 0.85
+            else [{"treatment_code": "SYN-THERAPEUTIC-ANTIBODY", "start_date": "2025-06-12"}]
+        )
         serum_count = rng.choice([2, 3])
         serums: list[dict[str, Any]] = []
 
@@ -83,12 +98,18 @@ def generate_source_cases(count: int, seed: int = DEFAULT_SEED) -> list[dict[str
             {
                 "case_id": f"SYN-CASE-{case_number:03d}",
                 "synthetic": True,
-                "schema_version": "0.1.0",
-                "phase": rng.choice(["pre_transplant", "post_transplant"]),
+                "schema_version": "0.2.0",
+                "phase": phase,
                 "evaluation_time": _iso(EVALUATION_TIME),
                 "patient_profile": {
                     "age": {"availability": "missing" if age_value is None else "known", "value": age_value},
-                    "pregnancy_history": {"availability": "known", "count": pregnancy_count, "dates": []},
+                    "sex_at_birth": {"availability": "known", "value": sex_at_birth},
+                    "pregnancy_history": {
+                        "availability": "known",
+                        "status": pregnancy_status,
+                        "count": pregnancy_count,
+                        "dates": [],
+                    },
                     "transfusion_history": {
                         "availability": "known",
                         "count": transfusion_count,
@@ -98,8 +119,21 @@ def generate_source_cases(count: int, seed: int = DEFAULT_SEED) -> list[dict[str
                     "diabetes": _boolean_observation(rng),
                     "hypertension": _boolean_observation(rng),
                     "autoimmune_disease": _boolean_observation(rng),
+                    "dialysis": {
+                        "availability": "known",
+                        "status": dialysis_status,
+                        "started_at": "2024-01-15" if dialysis_status == "on_dialysis" else None,
+                    },
+                    "rejection_suspicion": rejection_suspicion,
+                    "organ_context": {
+                        "availability": "known",
+                        "target_organ": "kidney",
+                        "status": "waiting_list" if phase == "pre_transplant" else "follow_up",
+                        "registration_date": "2023-09-01",
+                    },
                     "previous_transplants": {"availability": "known", "events": []},
-                    "antibody_based_treatments": {"availability": "known", "events": []},
+                    "car_t_treatments": {"availability": "known", "events": car_t_events},
+                    "therapeutic_antibody_treatments": {"availability": "known", "events": antibody_events},
                 },
                 "serums": serums,
                 "provenance": {

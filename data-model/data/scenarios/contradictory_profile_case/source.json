@@ -1,12 +1,13 @@
 {
   "case_id": "SYN-CASE-005",
   "synthetic": true,
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "phase": "post_transplant",
   "evaluation_time": "2026-11-14T09:00:00Z",
   "patient_profile": {
     "age": {"availability": "known", "value": 61},
-    "pregnancy_history": {"availability": "known", "count": 0, "dates": []},
+    "sex_at_birth": {"availability": "known", "value": "female"},
+    "pregnancy_history": {"availability": "known", "status": "none", "count": 0, "dates": []},
     "transfusion_history": {"availability": "known", "count": 0, "dates": [], "frequency": "none"},
     "diabetes": {"availability": "known", "value": false},
     "hypertension": {
@@ -18,8 +19,12 @@
       ]
     },
     "autoimmune_disease": {"availability": "known", "value": false},
+    "dialysis": {"availability": "known", "status": "not_on_dialysis", "started_at": null},
+    "rejection_suspicion": {"availability": "known", "value": true, "observed_at": "2026-11-09T15:00:00Z"},
+    "organ_context": {"availability": "known", "target_organ": "kidney", "status": "follow_up", "registration_date": "2022-02-18"},
     "previous_transplants": {"availability": "known", "events": []},
-    "antibody_based_treatments": {"availability": "known", "events": []}
+    "car_t_treatments": {"availability": "known", "events": []},
+    "therapeutic_antibody_treatments": {"availability": "known", "events": []}
   },
   "serums": [
     {

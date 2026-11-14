@@ -35,6 +35,7 @@
         "score_status",
         "proposed_risk_category",
         "category_status",
+        "context",
         "factors",
         "missing_data"
       ],
@@ -45,6 +46,17 @@
           "enum": ["minimal", "moderate", "medium", "high", "very_high", "uncertain"]
         },
         "category_status": {"enum": ["pending_review", "validated"]},
+        "context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sex_at_birth", "dialysis", "rejection_suspicion", "organ_context"],
+          "properties": {
+            "sex_at_birth": {"type": "object"},
+            "dialysis": {"type": "object"},
+            "rejection_suspicion": {"type": "object"},
+            "organ_context": {"type": "object"}
+          }
+        },
         "factors": {
           "type": "array",
           "items": {

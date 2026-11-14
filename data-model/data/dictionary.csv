@@ -1,19 +1,29 @@
 field_path,layer,type,required,allowed_values,description,medical_review_state
 case_id,source,string,true,SYN-CASE-NNN,Stable synthetic case identifier,validated_functional
 synthetic,source,boolean,true,true,Explicit synthetic-data marker,validated_functional
-schema_version,source,string,true,0.1.0,Source contract version,validated_functional
+schema_version,source,string,true,0.2.0,Source contract version,validated_functional
 phase,source,enum,true,pre_transplant|post_transplant,Clinical phase kept as context,pending_review
 evaluation_time,source,datetime,true,ISO 8601,Latest instant visible to the analysis,validated_functional
 patient_profile.age.availability,source,enum,true,known|missing|not_applicable|contradictory,Age data state,validated_functional
 patient_profile.age.value,source,integer|null,true,non-negative,Age source value without derived interpretation,pending_review
+patient_profile.sex_at_birth.value,source,enum|null,true,female|male|intersex|null,Source sex value without inferred scoring,pending_review
+patient_profile.pregnancy_history.status,source,enum,true,none|one|multiple|unknown,Explicit pregnancy-history state consistent with count,pending_review
 patient_profile.pregnancy_history.count,source,integer|null,true,non-negative,Source pregnancy count,pending_review
 patient_profile.transfusion_history.count,source,integer|null,true,non-negative,Source transfusion count,pending_review
 patient_profile.transfusion_history.frequency,source,enum|null,true,none|single|multiple|regular|unknown,Source frequency; regular is not yet defined,pending_review
 patient_profile.diabetes.value,source,boolean|null,true,true|false|null,Source diabetes state; no weight is defined,pending_review
 patient_profile.hypertension.value,source,boolean|null,true,true|false|null,Source hypertension state; no weight is defined,pending_review
 patient_profile.autoimmune_disease.value,source,boolean|null,true,true|false|null,Source autoimmune disease state; no weight is defined,pending_review
+patient_profile.dialysis.status,source,enum,true,not_on_dialysis|on_dialysis|unknown,Source dialysis state without risk interpretation,pending_review
+patient_profile.dialysis.started_at,source,date|null,true,ISO 8601 date|null,Known dialysis start date when applicable,pending_review
+patient_profile.rejection_suspicion.value,source,boolean|null,true,true|false|null,Source suspicion flag; not a diagnosis,pending_review
+patient_profile.rejection_suspicion.observed_at,source,datetime|null,true,ISO 8601|null,Timestamp attached to the source suspicion flag,pending_review
+patient_profile.organ_context.target_organ,source,enum,true,kidney,Target organ for the demonstrator,validated_functional
+patient_profile.organ_context.status,source,enum,true,waiting_list|suspended|transplanted|follow_up|unknown,Source organ workflow status without eligibility inference,pending_review
+patient_profile.organ_context.registration_date,source,date|null,true,ISO 8601 date|null,Source registration date,pending_review
 patient_profile.previous_transplants.events,source,array,true,synthetic events,Prior transplant source facts; no weight is defined,pending_review
-patient_profile.antibody_based_treatments.events,source,array,true,synthetic events,CAR-T or other antibody-based treatment facts,pending_review
+patient_profile.car_t_treatments.events,source,array,true,synthetic events,CAR-T source facts; no weight is defined,pending_review
+patient_profile.therapeutic_antibody_treatments.events,source,array,true,synthetic events,Therapeutic-antibody source facts; no weight is defined,pending_review
 serums[].serum_id,source,string,true,SER-NNN,Stable synthetic serum identifier,validated_functional
 serums[].collected_at,source,datetime,true,ISO 8601,Synthetic collection time,validated_functional
 serums[].assays[].assay_id,source,string,true,ASSAY-NNN,Stable synthetic assay identifier,validated_functional
@@ -27,6 +37,7 @@ current_result_summary.status,restitution,enum,true,source_consistent|discordanc
 profile.profile_score,restitution,integer|null,true,non-negative|null,Derived score; null while weights are unresolved,pending_review
 profile.score_status,restitution,enum,true,pending_review|validated,Review state of the score,pending_review
 profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Proposed category; uncertain in current ruleset,pending_review
+profile.context,restitution,object,true,source-preserving context,Non-scored sex dialysis rejection-suspicion and organ facts,validated_functional
 profile.factors[].contribution,restitution,integer|null,true,integer|null,Per-factor contribution; null before validation,pending_review
 profile.missing_data[].path,restitution,string,true,source field path,Explicit location of missing or contradictory data,validated_functional
 history_pattern,restitution,enum,true,negative_constant|evolving|fluctuating|indeterminate,Structured history description,pending_review

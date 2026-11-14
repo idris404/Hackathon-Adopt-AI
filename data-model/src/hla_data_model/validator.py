@@ -21,7 +21,10 @@ PROFILE_PATHS = {
     "PF-05": "autoimmune_disease",
     "PF-06": "previous_transplants",
     "PF-07": "transfusion_history",
+    "PF-08": "car_t_treatments",
+    "PF-09": "therapeutic_antibody_treatments",
 }
+PROFILE_CONTEXT_PATHS = ("sex_at_birth", "dialysis", "rejection_suspicion", "organ_context")
 DERIVED_SOURCE_KEYS = {
     "profile_score",
     "proposed_risk_category",
@@ -53,6 +56,17 @@ def _parse_datetime(value: Any, path: str, errors: list[str]) -> datetime | None
         return datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError:
         errors.append(f"{path}: invalid ISO 8601 date-time")
+        return None
+
+
+def _parse_date(value: Any, path: str, errors: list[str]):
+    if not isinstance(value, str):
+        errors.append(f"{path}: expected an ISO 8601 date string")
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        errors.append(f"{path}: invalid ISO 8601 date")
         return None
 
 
@@ -156,7 +170,7 @@ def _validate_source(source: dict[str, Any], errors: list[str]) -> dict[str, dic
     )
     if source.get("synthetic") is not True:
         errors.append("source.synthetic: must be true")
-    if source.get("schema_version") != "0.1.0":
+    if source.get("schema_version") != "0.2.0":
         errors.append("source.schema_version: unsupported version")
     if source.get("phase") not in PHASES:
         errors.append("source.phase: invalid phase")
@@ -171,13 +185,18 @@ def _validate_source(source: dict[str, Any], errors: list[str]) -> dict[str, dic
             profile,
             {
                 "age",
+                "sex_at_birth",
                 "pregnancy_history",
                 "transfusion_history",
                 "diabetes",
                 "hypertension",
                 "autoimmune_disease",
+                "dialysis",
+                "rejection_suspicion",
+                "organ_context",
                 "previous_transplants",
-                "antibody_based_treatments",
+                "car_t_treatments",
+                "therapeutic_antibody_treatments",
             },
             "source.patient_profile",
             errors,
@@ -193,6 +212,57 @@ def _validate_source(source: dict[str, Any], errors: list[str]) -> dict[str, dic
                 scalar_value = observation.get("value", observation.get("count"))
                 if scalar_value is not None:
                     errors.append(f"source.patient_profile.{name}: unavailable scalar value must be null")
+
+        pregnancy = profile.get("pregnancy_history", {})
+        if isinstance(pregnancy, dict) and pregnancy.get("availability") == "known":
+            count = pregnancy.get("count")
+            expected_status = "none" if count == 0 else "one" if count == 1 else "multiple" if isinstance(count, int) and count > 1 else None
+            if pregnancy.get("status") != expected_status:
+                errors.append("source.patient_profile.pregnancy_history.status: inconsistent with count")
+
+        sex = profile.get("sex_at_birth", {})
+        if isinstance(sex, dict):
+            if sex.get("availability") == "known" and sex.get("value") not in {"female", "male", "intersex"}:
+                errors.append("source.patient_profile.sex_at_birth.value: invalid known value")
+            if sex.get("availability") != "known" and sex.get("value") is not None:
+                errors.append("source.patient_profile.sex_at_birth.value: unavailable value must be null")
+
+        dialysis = profile.get("dialysis", {})
+        if isinstance(dialysis, dict):
+            if dialysis.get("status") == "on_dialysis" and not isinstance(dialysis.get("started_at"), str):
+                errors.append("source.patient_profile.dialysis.started_at: required when status is on_dialysis")
+            if dialysis.get("status") == "not_on_dialysis" and dialysis.get("started_at") is not None:
+                errors.append("source.patient_profile.dialysis.started_at: must be null when not on dialysis")
+            if isinstance(dialysis.get("started_at"), str):
+                started_at = _parse_date(dialysis["started_at"], "source.patient_profile.dialysis.started_at", errors)
+                evaluation_time = _parse_datetime(source.get("evaluation_time"), "source.evaluation_time", [])
+                if started_at and evaluation_time and started_at > evaluation_time.date():
+                    errors.append("source.patient_profile.dialysis.started_at: occurs after evaluation_time")
+
+        organ_context = profile.get("organ_context", {})
+        if isinstance(organ_context, dict):
+            if organ_context.get("target_organ") != "kidney":
+                errors.append("source.patient_profile.organ_context.target_organ: demonstrator supports kidney only")
+            if isinstance(organ_context.get("registration_date"), str):
+                registration_date = _parse_date(
+                    organ_context["registration_date"],
+                    "source.patient_profile.organ_context.registration_date",
+                    errors,
+                )
+                evaluation_time = _parse_datetime(source.get("evaluation_time"), "source.evaluation_time", [])
+                if registration_date and evaluation_time and registration_date > evaluation_time.date():
+                    errors.append("source.patient_profile.organ_context.registration_date: occurs after evaluation_time")
+
+        rejection = profile.get("rejection_suspicion", {})
+        if isinstance(rejection, dict) and isinstance(rejection.get("observed_at"), str):
+            observed_at = _parse_datetime(
+                rejection["observed_at"],
+                "source.patient_profile.rejection_suspicion.observed_at",
+                errors,
+            )
+            evaluation_time = _parse_datetime(source.get("evaluation_time"), "source.evaluation_time", [])
+            if observed_at and evaluation_time and observed_at > evaluation_time:
+                errors.append("source.patient_profile.rejection_suspicion.observed_at: occurs after evaluation_time")
 
     provenance = source.get("provenance")
     if not isinstance(provenance, dict) or provenance.get("source_record_copied") is not False:
@@ -258,6 +328,15 @@ def _validate_restitution(
     if profile.get("category_status") != "pending_review":
         errors.append("restitution.profile.category_status: must be pending_review")
 
+    source_profile = source.get("patient_profile", {})
+    context = profile.get("context")
+    if not isinstance(context, dict):
+        errors.append("restitution.profile.context: expected an object")
+    else:
+        for context_name in PROFILE_CONTEXT_PATHS:
+            if context.get(context_name) != source_profile.get(context_name):
+                errors.append(f"restitution.profile.context.{context_name}: must preserve the source value")
+
     factors = profile.get("factors")
     factor_index: dict[str, dict[str, Any]] = {}
     if not isinstance(factors, list):
@@ -278,7 +357,6 @@ def _validate_restitution(
             if factor.get("contribution") is not None:
                 errors.append(f"{factor_path}.contribution: must be null until its rule is validated")
 
-    source_profile = source.get("patient_profile", {})
     for factor_id, source_name in PROFILE_PATHS.items():
         source_observation = source_profile.get(source_name, {})
         restitution_factor = factor_index.get(factor_id)
@@ -297,6 +375,12 @@ def _validate_restitution(
         observation = source_profile.get(source_name, {})
         if observation.get("availability") in {"missing", "contradictory"}:
             expected_path = f"patient_profile.{source_name}"
+            if expected_path not in missing_paths:
+                errors.append(f"restitution.profile.missing_data: must include {expected_path}")
+    for context_name in PROFILE_CONTEXT_PATHS:
+        observation = source_profile.get(context_name, {})
+        if isinstance(observation, dict) and observation.get("availability") in {"missing", "contradictory"}:
+            expected_path = f"patient_profile.{context_name}"
             if expected_path not in missing_paths:
                 errors.append(f"restitution.profile.missing_data: must include {expected_path}")
 

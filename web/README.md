@@ -7,11 +7,16 @@ Application web du projet **Hackathon Adopt AI** : une API Python (FastAPI), une
 ## Architecture
 
 ```
-web/
-├── backend/        # API Python (FastAPI)
-├── frontend/       # SPA Vite + React + TypeScript
-└── dependencies/   # Docker Compose (PostgreSQL), volume de données ignoré par git
+Hackathon-Adopt-AI/
+├── dependencies/       # Docker Compose (PostgreSQL + pgvector)
+│   ├── compose.yml
+│   └── volumes/        # données PostgreSQL, ignoré par git
+└── web/
+    ├── backend/        # API Python (FastAPI)
+    └── frontend/       # SPA Vite + React + TypeScript
 ```
+
+`dependencies/` est à la racine du dépôt, à côté de `web/`, et non dans `web/`.
 
 Le backend et le frontend ne partagent aucun code. Le contrat entre les deux est l'API HTTP : schémas **Pydantic** côté serveur, schémas **Zod** côté client.
 
@@ -21,7 +26,7 @@ Le backend et le frontend ne partagent aucun code. Le contrat entre les deux est
 | --- | --- |
 | Backend | Python, FastAPI, SQLAlchemy (ORM), Pydantic, gestion des dépendances avec **uv** |
 | Frontend | Vite, React, TypeScript strict, Zod, React Hook Form, TanStack Query, TanStack Table |
-| Base de données | PostgreSQL (Docker Compose) |
+| Base de données | PostgreSQL 17 avec l'extension pgvector (Docker Compose) |
 | Tests | Backend : pytest. Frontend : Vitest (unitaires) et Playwright (e2e) |
 
 ## Prérequis
@@ -36,22 +41,55 @@ Le backend et le frontend ne partagent aucun code. Le contrat entre les deux est
 
 Les URLs de connexion et les secrets passent par les variables d'environnement. `.env` n'est jamais commité, `.env.example` documente les variables attendues.
 
+Depuis `web/` :
+
 ```bash
 cp .env.example .env
 ```
 
 ### 2. Lancer le projet
 
-| Action | Commande | Dossier |
+| Action | Commande | Depuis |
 | --- | --- | --- |
-| PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | `web/` |
+| PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Frontend | `npm run dev -- --strictPort` | `web/frontend/` |
 
 - Backend : <http://localhost:8000> (documentation OpenAPI sur `/docs`)
 - Frontend : <http://localhost:5173>
 
-Dans VS Code, le lancement `backend + frontend` de [.vscode/launch.json](.vscode/launch.json) démarre les deux applications ensemble.
+Dans VS Code, la configuration `dependencies (Docker)` de [.vscode/launch.json](../.vscode/launch.json) lance PostgreSQL.
+
+## Dépendances (PostgreSQL)
+
+Le dossier [dependencies/](../dependencies/) contient le Docker Compose de l'infrastructure.
+
+| | |
+| --- | --- |
+| Service | `postgres`, conteneur `adopt-ai-postgres` |
+| Image | `pgvector/pgvector:pg17-trixie` (PostgreSQL 17 avec pgvector) |
+| Données | `dependencies/volumes/postgres`, ignoré par git |
+
+Variables lues par le compose, avec leurs valeurs par défaut (réservées au développement local) :
+
+| Variable | Défaut | Rôle |
+| --- | --- | --- |
+| `DB_USER` | `adopt_ai` | Utilisateur PostgreSQL |
+| `DB_PASSWORD` | `password` | Mot de passe de l'utilisateur |
+| `DB_NAME` | `adopt_ai_db` | Base créée au premier démarrage |
+| `DB_PORT` | `5432` | Port exposé sur la machine |
+
+```bash
+# Depuis la racine du dépôt
+docker compose -f ./dependencies/compose.yml up -d     # démarrer
+docker compose -f ./dependencies/compose.yml down      # arrêter, les données sont conservées
+```
+
+À savoir :
+
+- Docker Compose ne lit automatiquement que `dependencies/.env`, pas `web/.env`. Sans fichier, les valeurs par défaut s'appliquent. Pour réutiliser les variables de `web/.env`, ajouter `--env-file web/.env` à la commande. Le backend doit se connecter avec les mêmes valeurs.
+- `DB_USER`, `DB_PASSWORD` et `DB_NAME` ne sont prises en compte qu'à la première initialisation des données. Pour les changer ensuite, arrêter le conteneur et supprimer `dependencies/volumes/postgres` (cela efface la base).
+- L'image embarque pgvector, mais l'extension doit être activée dans la base : `CREATE EXTENSION IF NOT EXISTS vector;`.
 
 ## Authentification
 
@@ -80,7 +118,7 @@ Le détail complet est dans [.claude/rules/](.claude/rules/). L'essentiel :
 
 **Commun**
 - **Aucune valeur en dur** : toute valeur qui porte un sens est une constante de `backend/app/constants/` ou `frontend/src/constants/`. Ce qui change selon l'environnement et les secrets vont dans `.env`.
-- Ne jamais commiter de secrets (`.env`, `.venv`, `node_modules`, `dependencies/volume` sont dans le `.gitignore`).
+- Ne jamais commiter de secrets (`.env`, `.venv`, `node_modules` et `dependencies/volumes` sont dans les `.gitignore`).
 - Design et UI : voir [DESIGN.md](DESIGN.md).
 
 ## Tests

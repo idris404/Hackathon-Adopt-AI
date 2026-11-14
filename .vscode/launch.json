@@ -13,21 +13,21 @@
       "type": "node-terminal",
       "request": "launch",
       "command": "uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
-      "cwd": "${workspaceFolder}/backend"
+      "cwd": "${workspaceFolder}/web/backend"
     },
     {
       "name": "frontend",
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev -- --strictPort",
-      "cwd": "${workspaceFolder}/web"
+      "cwd": "${workspaceFolder}/web/frontend"
     },
     {
       "name": "web: Chrome",
       "type": "chrome",
       "request": "launch",
       "url": "http://localhost:5173",
-      "webRoot": "${workspaceFolder}/web"
+      "webRoot": "${workspaceFolder}/web/frontend"
     }
   ],
   "compounds": [

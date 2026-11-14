@@ -2,14 +2,19 @@
 
 ## Architecture
 
-Monorepo avec deux applications séparées, plus les dépendances d'infrastructure :
+Monorepo avec deux applications séparées (dans `web/`), plus les dépendances d'infrastructure, situées à la **racine du dépôt**, à côté de `web/` :
 
 ```
-web/
-├── backend/        # API Python (FastAPI)
-├── frontend/       # SPA Vite + React + TypeScript
-└── dependencies/   # Docker Compose (PostgreSQL) — volume de données ignoré par git
+Hackathon-Adopt-AI/
+├── dependencies/       # Docker Compose (PostgreSQL + pgvector)
+│   ├── compose.yml
+│   └── volumes/        # données PostgreSQL — ignoré par git
+└── web/
+    ├── backend/        # API Python (FastAPI)
+    └── frontend/       # SPA Vite + React + TypeScript
 ```
+
+Dans ce fichier et dans `.claude/rules/`, les chemins `backend/…` et `frontend/…` sont relatifs à `web/`.
 
 ## Stack
 
@@ -28,8 +33,9 @@ web/
 
 ### Base de données
 
-- **PostgreSQL**, lancé via Docker Compose (`dependencies/compose.yml`).
+- **PostgreSQL 17 avec l'extension pgvector** (image `pgvector/pgvector:pg17-trixie`), lancé via Docker Compose (`dependencies/compose.yml`, à la racine du dépôt). L'extension doit être activée dans la base (`CREATE EXTENSION IF NOT EXISTS vector;`).
 - La configuration (URL de connexion, secrets) passe par les variables d'environnement : `.env` n'est jamais commité, `.env.example` documente les variables attendues.
+- Le compose lit `DB_USER`, `DB_PASSWORD`, `DB_NAME` et `DB_PORT`, avec des valeurs par défaut pour le développement local. Docker Compose ne lit automatiquement que `dependencies/.env`, pas `web/.env` : pour utiliser `web/.env`, ajouter `--env-file web/.env` à la commande. Le backend doit se connecter avec les mêmes valeurs.
 
 ## Authentification
 
@@ -42,7 +48,7 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 
 | Action | Commande | Dossier |
 | --- | --- | --- |
-| Lancer PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | `web/` |
+| Lancer PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Lancer le backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Lancer le frontend | `npm run dev -- --strictPort` | `web/frontend/` (port 5173) |
 
@@ -51,5 +57,5 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 - Backend et frontend ne partagent pas de code : le contrat entre les deux est l'API HTTP (schémas Pydantic côté serveur, schémas Zod côté client).
 - Toute donnée qui entre dans le système (corps de requête, query params, saisie utilisateur) est validée par un schéma ; toute donnée qui sort de l'API passe par un schéma de réponse Pydantic.
 - Aucune valeur en dur : toute valeur littérale qui porte un sens, y compris les valeurs des règles métier, est une constante du dossier global `backend/app/constants/` ou `frontend/src/constants/`. Les valeurs qui changent selon l'environnement et les secrets passent par la configuration (`.env`), jamais par les constantes. Détail dans `.claude/rules/`.
-- Ne jamais commiter de secrets : `.env`, `.venv`, `node_modules` et `dependencies/volume` sont dans le `.gitignore`.
+- Ne jamais commiter de secrets : `.env`, `.venv`, `node_modules` et `dependencies/volumes` sont dans les `.gitignore`.
 - Design / UI : voir `DESIGN.md`.

@@ -7,3 +7,5 @@ dependencies/volumes
 .claude/settings.json
 .pytest_cache
 .coverage
+frontend/web/dist
+frontend/web/node_modules

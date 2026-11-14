@@ -1,6 +1,7 @@
-# Patient profile dataset v3
+# Processed patient profiles
 
-This directory is generated deterministically from the corrected synthetic CSV.
+This is the sole active processed patient dataset, generated deterministically
+from the corrected v3 synthetic CSV.
 
 - `profile-source-cases.jsonl.gz` contains normalized kidney-only profile facts;
 - `profile-scores.jsonl.gz` contains the deterministic `PROFILE-1.0.0` score and category;

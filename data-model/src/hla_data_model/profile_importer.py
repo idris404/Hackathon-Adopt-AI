@@ -6,41 +6,103 @@ import argparse
 import csv
 import gzip
 import hashlib
+import io
 import json
 from collections import Counter
 from contextlib import ExitStack
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 from .profile_analyzer import analyze_profile
-from .profile_csv_importer import ProfileImportError, _source_case
-from .profile_csv_v2_importer import (
-    GENERATION_TRUTH_COLUMNS,
-    V2_REQUIRED_COLUMNS,
-    _decoded_input_bytes,
-    _open_csv,
-    _open_deterministic_gzip_text,
-    _outcome_record,
-    _validate_outcome,
+from .profile_normalization import (
+    CSV_COLUMNS,
+    IGNORED_RISK_COLUMNS,
+    ProfileImportError,
+    normalize_source_case,
 )
 from .validator import RULESET_VERSION, validate_source_case
 
 
 IMPORTER_VERSION = "profile-csv-importer-v3"
 SOURCE_DATASET = "patients_synthetiques-v3"
-V2_OUTCOME_COLUMNS = ("issue_statut", "rejet_1an", "type_rejet", "date_rejet")
 OUTCOME_COLUMNS = ("_issue_statut", "_rejet_1an", "_type_rejet", "_date_rejet")
-GENERATION_TRUTH_COLUMNS_V3 = (*GENERATION_TRUTH_COLUMNS, "_verite_risque_reference")
-V3_REQUIRED_COLUMNS = tuple(
-    column for column in V2_REQUIRED_COLUMNS if column not in V2_OUTCOME_COLUMNS
-) + ("antecedent_rejet", *OUTCOME_COLUMNS, "_verite_risque_reference")
+GENERATION_TRUTH_COLUMNS = (
+    "_verite_groupe",
+    "_verite_tgi",
+    "_verite_interdits",
+    "_verite_dsa",
+    "_verite_mfi_dsa_max",
+    "_verite_p_rejet",
+    "_verite_p_rejet_donneur_quelconque",
+    "_verite_risque_reference",
+)
+EXTRA_COLUMNS = (
+    "jeu",
+    "maladie_renale_initiale",
+    "type_donneur",
+    "antecedent_rejet",
+    *OUTCOME_COLUMNS,
+    *GENERATION_TRUTH_COLUMNS,
+)
+REQUIRED_COLUMNS = tuple(
+    column for column in CSV_COLUMNS if column not in IGNORED_RISK_COLUMNS
+) + EXTRA_COLUMNS
 
 
-def _outcome_row(row: dict[str, str]) -> dict[str, str]:
-    normalized = dict(row)
-    for old_name, new_name in zip(V2_OUTCOME_COLUMNS, OUTCOME_COLUMNS):
-        normalized[old_name] = row[new_name]
-    return normalized
+def _open_csv(path: Path, stack: ExitStack) -> TextIO:
+    if path.suffix == ".gz":
+        return stack.enter_context(gzip.open(path, mode="rt", encoding="utf-8-sig", newline=""))
+    return stack.enter_context(path.open(mode="r", encoding="utf-8-sig", newline=""))
+
+
+def _decoded_input_bytes(path: Path) -> bytes:
+    raw = path.read_bytes()
+    return gzip.decompress(raw) if path.suffix == ".gz" else raw
+
+
+def _open_deterministic_gzip_text(path: Path, stack: ExitStack) -> TextIO:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    raw = stack.enter_context(path.open("wb"))
+    compressed = stack.enter_context(gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0))
+    return stack.enter_context(io.TextIOWrapper(compressed, encoding="utf-8", newline=""))
+
+
+def _validate_outcome(row: dict[str, str]) -> None:
+    status = row["_issue_statut"]
+    rejection = row["_rejet_1an"]
+    if status not in {"observee", "en_cours", "non_applicable"}:
+        raise ProfileImportError(f"{row['patient_id']}: unsupported outcome status {status}")
+    if status == "observee" and rejection not in {"true", "false"}:
+        raise ProfileImportError(f"{row['patient_id']}: observed outcome requires _rejet_1an")
+    if status == "en_cours" and rejection == "false":
+        raise ProfileImportError(f"{row['patient_id']}: ongoing follow-up cannot establish rejection absence")
+    if status == "non_applicable" and rejection:
+        raise ProfileImportError(f"{row['patient_id']}: non-applicable outcome cannot contain _rejet_1an")
+    if rejection == "true" and (not row["_type_rejet"] or not row["_date_rejet"]):
+        raise ProfileImportError(f"{row['patient_id']}: rejection outcome requires type and date")
+    if rejection != "true" and (row["_type_rejet"] or row["_date_rejet"]):
+        raise ProfileImportError(f"{row['patient_id']}: rejection details require _rejet_1an=true")
+
+
+def _outcome_record(row: dict[str, str], source: dict[str, Any]) -> dict[str, Any]:
+    raw_rejection = row["_rejet_1an"]
+    rejection = True if raw_rejection == "true" else False if raw_rejection == "false" else None
+    status = {
+        "observee": "observed",
+        "en_cours": "ongoing",
+        "non_applicable": "not_applicable",
+    }[row["_issue_statut"]]
+    return {
+        "case_id": source["case_id"],
+        "synthetic": True,
+        "phase": source["phase"],
+        "outcome_status": status,
+        "rejection_within_one_year": rejection,
+        "rejection_type": row["_type_rejet"] or None,
+        "rejection_date": row["_date_rejet"] or None,
+        "label_status": "simulated_source_outcome",
+        "provenance": source["provenance"],
+    }
 
 
 def _profile_record(source: dict[str, Any]) -> dict[str, Any]:
@@ -55,7 +117,7 @@ def _profile_record(source: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def import_profile_csv_v3(
+def import_patient_profiles(
     input_path: Path,
     sources_path: Path,
     profiles_path: Path,
@@ -87,7 +149,7 @@ def import_profile_csv_v3(
 
     with ExitStack() as stack:
         reader = csv.DictReader(_open_csv(input_path, stack))
-        missing_columns = sorted(set(V3_REQUIRED_COLUMNS) - set(reader.fieldnames or ()))
+        missing_columns = sorted(set(REQUIRED_COLUMNS) - set(reader.fieldnames or ()))
         if missing_columns:
             raise ProfileImportError(f"Missing CSV columns: {', '.join(missing_columns)}")
         handles = {
@@ -114,7 +176,12 @@ def import_profile_csv_v3(
                 applied_defaults["unknown_rejection_history_as_none"] += 1
 
             imported_records += 1
-            source, detected = _source_case(row, imported_records)
+            source, detected = normalize_source_case(
+                row,
+                imported_records,
+                importer_version=IMPORTER_VERSION,
+                source_dataset=SOURCE_DATASET,
+            )
             source["case_id"] = f"SYN-PROFILE-{imported_records:05d}"
             source["patient_profile"]["source_context"].update(
                 {
@@ -130,10 +197,9 @@ def import_profile_csv_v3(
                 }
             )
             validate_source_case(source)
-            normalized_outcome = _outcome_row(row)
-            _validate_outcome(normalized_outcome)
+            _validate_outcome(row)
             profile = _profile_record(source)
-            outcome = _outcome_record(normalized_outcome, source)
+            outcome = _outcome_record(row, source)
 
             for name, record in (("sources", source), ("profiles", profile), ("outcomes", outcome)):
                 line = f"{json.dumps(record, ensure_ascii=False, sort_keys=True)}\n"
@@ -177,7 +243,7 @@ def import_profile_csv_v3(
         "profile_categories": dict(sorted(categories.items())),
         "profile_score_statuses": dict(sorted(score_statuses.items())),
         "outcome_statuses": dict(sorted(outcome_statuses.items())),
-        "generation_truth_columns_excluded": list(GENERATION_TRUTH_COLUMNS_V3),
+        "generation_truth_columns_excluded": list(GENERATION_TRUTH_COLUMNS),
         "generation_metadata_columns_excluded": ["_anomalies_injectees"],
         "profile_scores_generated": True,
         "outputs": {
@@ -202,7 +268,7 @@ def main() -> int:
     parser.add_argument("--outcomes", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     args = parser.parse_args()
-    report = import_profile_csv_v3(
+    report = import_patient_profiles(
         args.input, args.sources, args.profiles, args.outcomes, args.report
     )
     print(

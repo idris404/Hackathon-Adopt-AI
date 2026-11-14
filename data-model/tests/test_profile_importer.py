@@ -12,15 +12,15 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from hla_data_model.profile_csv_v3_importer import (  # noqa: E402
-    GENERATION_TRUTH_COLUMNS_V3,
-    V3_REQUIRED_COLUMNS,
-    import_profile_csv_v3,
+from hla_data_model.profile_importer import (  # noqa: E402
+    GENERATION_TRUTH_COLUMNS,
+    REQUIRED_COLUMNS,
+    import_patient_profiles,
 )
 
 
 def base_v3_row(patient_id: str = "SYN-00001") -> dict[str, str]:
-    row = {column: "" for column in V3_REQUIRED_COLUMNS}
+    row = {column: "" for column in REQUIRED_COLUMNS}
     row.update(
         {
             "patient_id": patient_id,
@@ -68,7 +68,7 @@ def base_v3_row(patient_id: str = "SYN-00001") -> dict[str, str]:
 
 def write_csv(path: Path, rows: list[dict[str, str]]) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=V3_REQUIRED_COLUMNS)
+        writer = csv.DictWriter(handle, fieldnames=REQUIRED_COLUMNS)
         writer.writeheader()
         writer.writerows(rows)
 
@@ -78,14 +78,14 @@ def read_jsonl_gzip(path: Path) -> list[dict]:
         return [json.loads(line) for line in handle]
 
 
-class ProfileCsvV3ImporterTests(unittest.TestCase):
+class ProfileImporterTests(unittest.TestCase):
     def _import_rows(self, root: Path, rows: list[dict[str, str]]):
         input_path = root / "patients.csv"
         write_csv(input_path, rows)
         sources_path = root / "sources.jsonl.gz"
         profiles_path = root / "profiles.jsonl.gz"
         outcomes_path = root / "outcomes.jsonl.gz"
-        report = import_profile_csv_v3(
+        report = import_patient_profiles(
             input_path,
             sources_path,
             profiles_path,
@@ -109,7 +109,7 @@ class ProfileCsvV3ImporterTests(unittest.TestCase):
             "yes",
         )
         serialized_source = json.dumps(sources)
-        for forbidden in (*GENERATION_TRUTH_COLUMNS_V3, "_anomalies_injectees", "_rejet_1an"):
+        for forbidden in (*GENERATION_TRUTH_COLUMNS, "_anomalies_injectees", "_rejet_1an"):
             self.assertNotIn(forbidden, serialized_source)
 
     def test_unknown_and_future_transplant_values_follow_confirmed_normalization(self) -> None:

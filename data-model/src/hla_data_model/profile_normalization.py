@@ -1,23 +1,14 @@
-"""Import deterministic synthetic patient profiles without trusting source risk labels."""
+"""Normalize one synthetic patient-profile CSV row into the source contract."""
 
 from __future__ import annotations
 
-import argparse
-import csv
-import hashlib
-import json
 import re
-from collections import Counter
 from datetime import date
-from pathlib import Path
 from typing import Any
 
-from .profile_analyzer import analyze_profile
-from .validator import RULESET_VERSION, validate_source_case
+from .validator import validate_source_case
 
 
-IMPORTER_VERSION = "profile-csv-importer-v1"
-SOURCE_DATASET = "patients_synthetiques-v1"
 IGNORED_RISK_COLUMNS = (
     "niveau_risque",
     "niveau_risque_statut",
@@ -79,10 +70,6 @@ CSV_COLUMNS = (
 
 class ProfileImportError(ValueError):
     """Raised when a CSV cannot safely be treated as deterministic synthetic data."""
-
-
-def _sha256(value: bytes) -> str:
-    return hashlib.sha256(value).hexdigest()
 
 
 def _split(value: str) -> list[str]:
@@ -228,7 +215,7 @@ def _events_observation(status: str, events: list[dict[str, Any]], contradictory
 
 
 def _previous_transplant_observation(
-    row: dict[str, str], events: list[dict[str, Any]], contradictory: bool
+    row: dict[str, str], events: list[dict[str, Any]]
 ) -> dict[str, Any]:
     status = row["greffe_anterieure_statut"]
     if status == "inconnu":
@@ -281,7 +268,12 @@ def _source_context(row: dict[str, str]) -> dict[str, Any]:
     }
 
 
-def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], list[str]]:
+def normalize_source_case(
+    row: dict[str, str],
+    sequence: int,
+    importer_version: str,
+    source_dataset: str,
+) -> tuple[dict[str, Any], list[str]]:
     contradictions = _detected_contradictions(row)
     contradiction_set = set(contradictions)
     age = _integer(row["age"])
@@ -367,7 +359,6 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
             "previous_transplants": _previous_transplant_observation(
                 row,
                 previous_events,
-                False,
             ),
             "car_t_treatments": _events_observation(row["car_t_statut"], car_t_events),
             "therapeutic_antibody_treatments": _events_observation(
@@ -378,108 +369,10 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
         "serums": [],
         "provenance": {
             "source_record_copied": False,
-            "generator_version": IMPORTER_VERSION,
-            "source_dataset": SOURCE_DATASET,
+            "generator_version": importer_version,
+            "source_dataset": source_dataset,
             "source_patient_id": row["patient_id"],
         },
     }
     validate_source_case(source)
     return source, contradictions
-
-
-def import_profile_csv(
-    input_path: Path,
-    sources_path: Path,
-    profiles_path: Path,
-    report_path: Path,
-) -> dict[str, Any]:
-    """Convert the source CSV to source cases and recompute profile outputs."""
-
-    paths = (input_path, sources_path, profiles_path, report_path)
-    if len({path.resolve() for path in paths}) != len(paths):
-        raise ProfileImportError("Input and output paths must be distinct")
-    if not input_path.is_file():
-        raise ProfileImportError(f"CSV file does not exist: {input_path}")
-    input_bytes = input_path.read_bytes()
-    with input_path.open(newline="", encoding="utf-8-sig") as handle:
-        reader = csv.DictReader(handle)
-        missing_columns = sorted(set(CSV_COLUMNS) - set(reader.fieldnames or ()))
-        if missing_columns:
-            raise ProfileImportError(f"Missing CSV columns: {', '.join(missing_columns)}")
-        rows = list(reader)
-    if any(row["synthetic"].lower() != "true" for row in rows):
-        raise ProfileImportError("Every input record must be explicitly marked synthetic=true")
-
-    sources: list[dict[str, Any]] = []
-    profiles: list[dict[str, Any]] = []
-    excluded = Counter()
-    contradictions = Counter()
-    categories = Counter()
-    score_statuses = Counter()
-    for row in rows:
-        if row["organe"] != "Rein":
-            excluded[f"unsupported_organ:{row['organe']}"] += 1
-            continue
-        source, detected = _source_case(row, len(sources) + 1)
-        profile = analyze_profile(source["patient_profile"])
-        sources.append(source)
-        profiles.append(
-            {
-                "case_id": source["case_id"],
-                "synthetic": True,
-                "phase": source["phase"],
-                "profile": profile,
-                "ruleset_version": RULESET_VERSION,
-                "provenance": source["provenance"],
-            }
-        )
-        contradictions.update(detected)
-        categories[profile["proposed_risk_category"]] += 1
-        score_statuses[profile["score_status"]] += 1
-
-    source_text = "".join(f"{json.dumps(item, ensure_ascii=False, sort_keys=True)}\n" for item in sources)
-    profile_text = "".join(f"{json.dumps(item, ensure_ascii=False, sort_keys=True)}\n" for item in profiles)
-    report = {
-        "importer_version": IMPORTER_VERSION,
-        "source_dataset": SOURCE_DATASET,
-        "input_file": input_path.name,
-        "input_sha256": _sha256(input_bytes),
-        "total_records": len(rows),
-        "imported_records": len(sources),
-        "excluded_records": sum(excluded.values()),
-        "excluded_by_reason": dict(sorted(excluded.items())),
-        "detected_contradictions": dict(sorted(contradictions.items())),
-        "source_risk_columns_ignored": list(IGNORED_RISK_COLUMNS),
-        "profile_categories": dict(sorted(categories.items())),
-        "profile_score_statuses": dict(sorted(score_statuses.items())),
-        "ruleset_version": RULESET_VERSION,
-        "outputs": {
-            "sources": {"file": sources_path.name, "sha256": _sha256(source_text.encode("utf-8"))},
-            "profiles": {"file": profiles_path.name, "sha256": _sha256(profile_text.encode("utf-8"))},
-        },
-    }
-    for path in (sources_path, profiles_path, report_path):
-        path.parent.mkdir(parents=True, exist_ok=True)
-    sources_path.write_text(source_text, encoding="utf-8")
-    profiles_path.write_text(profile_text, encoding="utf-8")
-    report_path.write_text(f"{json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True)}\n", encoding="utf-8")
-    return report
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, required=True)
-    parser.add_argument("--sources", type=Path, required=True)
-    parser.add_argument("--profiles", type=Path, required=True)
-    parser.add_argument("--report", type=Path, required=True)
-    args = parser.parse_args()
-    report = import_profile_csv(args.input, args.sources, args.profiles, args.report)
-    print(
-        f"Imported {report['imported_records']} profiles; "
-        f"excluded {report['excluded_records']} unsupported records"
-    )
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

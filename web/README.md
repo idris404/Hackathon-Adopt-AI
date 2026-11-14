@@ -104,8 +104,9 @@ Base URL de l'API : `http://localhost:8000/api/v1` (toutes les routes sont préf
 | Route | Rôle |
 | --- | --- |
 | `POST /api/v1/auth/register` | Inscription (`email`, `password`, JSON) |
-| `POST /api/v1/auth/login` | Connexion (formulaire `username` = email, `password`), pose le cookie de session |
-| `POST /api/v1/auth/logout` | Déconnexion, révoque la session côté serveur |
+| `POST /api/v1/auth/login` | Connexion (JSON `email`, `password`), pose le cookie de session |
+| `POST /api/v1/auth/logout` | Déconnexion de l'appareil courant, révoque cette session côté serveur |
+| `POST /api/v1/auth/logout-all` | Déconnexion de tous les appareils, révoque toutes les sessions de l'utilisateur |
 | `GET /api/v1/users/me`, `PATCH /api/v1/users/me` | Lire et modifier son profil |
 
 Le frontend doit envoyer le cookie avec chaque requête (`credentials: "include"`). Variables d'environnement dédiées : `DB_HOST`, `FRONTEND_URL`, `COOKIE_SECURE` (voir `.env.example`).

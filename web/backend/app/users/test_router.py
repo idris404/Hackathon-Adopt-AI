@@ -16,7 +16,7 @@ PUBLIC_USER_FIELDS = {"id", "email", "is_active", "is_superuser", "is_verified"}
 
 
 def login(client: TestClient, email: str, password: str):
-    return client.post(LOGIN_URL, data={"username": email, "password": password})
+    return client.post(LOGIN_URL, json={"email": email, "password": password})
 
 
 def find_user(user_db: FakeUserDatabase, email: str) -> FakeUser:

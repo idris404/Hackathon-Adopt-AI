@@ -1,5 +1,4 @@
 import pytest
-from fastapi.security import OAuth2PasswordRequestForm
 from fastapi_users.exceptions import UserAlreadyExists
 from pwdlib import PasswordHash
 from pwdlib.hashers.argon2 import Argon2Hasher
@@ -17,10 +16,6 @@ pytestmark = pytest.mark.anyio
 @pytest.fixture
 def manager(user_db: FakeUserDatabase) -> UserManager:
     return UserManager(user_db, build_password_helper())
-
-
-def credentials(email: str, password: str) -> OAuth2PasswordRequestForm:
-    return OAuth2PasswordRequestForm(username=email, password=password)
 
 
 async def test_create_stores_an_argon2id_hash_and_never_the_password(
@@ -71,7 +66,7 @@ async def test_authenticate_returns_the_user_with_valid_credentials(
 ) -> None:
     created = await manager.create(UserCreate(email=EMAIL, password=valid_password), safe=True)
 
-    user = await manager.authenticate(credentials(EMAIL, valid_password))
+    user = await manager.authenticate_with_email(EMAIL, valid_password)
 
     assert user is not None
     assert user.id == created.id
@@ -82,13 +77,13 @@ async def test_authenticate_returns_none_for_a_wrong_password(
 ) -> None:
     await manager.create(UserCreate(email=EMAIL, password=valid_password), safe=True)
 
-    assert await manager.authenticate(credentials(EMAIL, valid_password + "x")) is None
+    assert await manager.authenticate_with_email(EMAIL, valid_password + "x") is None
 
 
 async def test_authenticate_returns_none_for_an_unknown_email(
     manager: UserManager, valid_password: str
 ) -> None:
-    assert await manager.authenticate(credentials("ghost@example.com", valid_password)) is None
+    assert await manager.authenticate_with_email("ghost@example.com", valid_password) is None
 
 
 async def test_authenticate_rehashes_a_password_stored_with_weaker_parameters(
@@ -98,9 +93,9 @@ async def test_authenticate_rehashes_a_password_stored_with_weaker_parameters(
     old_hash = weak_hasher.hash(valid_password)
     user = await user_db.create({"email": EMAIL, "hashed_password": old_hash})
 
-    authenticated = await manager.authenticate(credentials(EMAIL, valid_password))
+    authenticated = await manager.authenticate_with_email(EMAIL, valid_password)
 
     assert authenticated is not None
     stored: FakeUser = user_db.users[user.id]
     assert stored.hashed_password != old_hash
-    assert await manager.authenticate(credentials(EMAIL, valid_password)) is not None
+    assert await manager.authenticate_with_email(EMAIL, valid_password) is not None

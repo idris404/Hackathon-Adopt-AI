@@ -122,6 +122,13 @@ class FakeAccessTokenDatabase:
     async def delete(self, access_token: FakeAccessToken) -> None:
         del self.tokens[access_token.token]
 
+    async def delete_all_for_user(self, user_id: uuid.UUID) -> None:
+        self.tokens = {
+            token: access_token
+            for token, access_token in self.tokens.items()
+            if access_token.user_id != user_id
+        }
+
 
 @pytest.fixture
 def anyio_backend() -> str:

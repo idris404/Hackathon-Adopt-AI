@@ -7,6 +7,7 @@ from fastapi_users.router.common import ErrorCode
 
 from app.conftest import AUTH_URL, USERS_URL, FakeAccessTokenDatabase, FakeUserDatabase
 from app.constants.auth import (
+    INVALID_CREDENTIALS_CODE,
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
     SESSION_COOKIE_NAME,
@@ -16,14 +17,14 @@ from app.constants.auth import (
 REGISTER_URL = f"{AUTH_URL}/register"
 LOGIN_URL = f"{AUTH_URL}/login"
 LOGOUT_URL = f"{AUTH_URL}/logout"
+LOGOUT_ALL_URL = f"{AUTH_URL}/logout-all"
 ME_URL = f"{USERS_URL}/me"
 
 PUBLIC_USER_FIELDS = {"id", "email", "is_active", "is_superuser", "is_verified"}
 
 
 def login(client: TestClient, email: str, password: str):
-    # OAuth2 : le champ s'appelle `username` et contient l'email, en formulaire.
-    return client.post(LOGIN_URL, data={"username": email, "password": password})
+    return client.post(LOGIN_URL, json={"email": email, "password": password})
 
 
 # --- Inscription -----------------------------------------------------------------
@@ -163,7 +164,7 @@ def test_login_gives_the_same_error_for_unknown_email_and_wrong_password(
 
     assert unknown_email.status_code == wrong_password.status_code == 400
     assert unknown_email.json() == wrong_password.json()
-    assert unknown_email.json() == {"detail": ErrorCode.LOGIN_BAD_CREDENTIALS}
+    assert unknown_email.json() == {"detail": INVALID_CREDENTIALS_CODE}
     assert SESSION_COOKIE_NAME not in unknown_email.cookies
     assert SESSION_COOKIE_NAME not in wrong_password.cookies
 
@@ -176,13 +177,58 @@ def test_login_rejects_an_inactive_account_with_the_same_error(
     response = login(client, registered_user["email"], registered_user["password"])
 
     assert response.status_code == 400
-    assert response.json() == {"detail": ErrorCode.LOGIN_BAD_CREDENTIALS}
+    assert response.json() == {"detail": INVALID_CREDENTIALS_CODE}
 
 
 def test_login_requires_both_fields(client: TestClient) -> None:
-    response = client.post(LOGIN_URL, data={"username": "alice@example.com"})
+    response = client.post(LOGIN_URL, json={"email": "alice@example.com"})
 
     assert response.status_code == 422
+
+
+def test_login_expects_email_and_not_username(
+    client: TestClient, registered_user: dict[str, str]
+) -> None:
+    payload = {"username": registered_user["email"], "password": registered_user["password"]}
+
+    response = client.post(LOGIN_URL, json=payload)
+
+    assert response.status_code == 422
+
+
+def test_login_does_not_accept_a_form_body(
+    client: TestClient, registered_user: dict[str, str]
+) -> None:
+    form = {"username": registered_user["email"], "password": registered_user["password"]}
+
+    response = client.post(LOGIN_URL, data=form)
+
+    assert response.status_code == 422
+    assert SESSION_COOKIE_NAME not in response.cookies
+
+
+@pytest.mark.parametrize("email", ["", "not-an-email", "alice@"])
+def test_login_rejects_a_malformed_email(
+    client: TestClient, valid_password: str, email: str
+) -> None:
+    assert login(client, email, valid_password).status_code == 422
+
+
+def test_login_rejects_a_password_longer_than_the_maximum_without_hashing_it(
+    client: TestClient, registered_user: dict[str, str], access_token_db: FakeAccessTokenDatabase
+) -> None:
+    response = login(client, registered_user["email"], "p" * (PASSWORD_MAX_LENGTH + 1))
+
+    assert response.status_code == 422
+    assert access_token_db.tokens == {}
+
+
+def test_login_accepts_the_email_in_any_case(
+    client: TestClient, registered_user: dict[str, str]
+) -> None:
+    response = login(client, registered_user["email"].upper(), registered_user["password"])
+
+    assert response.status_code == 204
 
 
 # --- Session ---------------------------------------------------------------------
@@ -302,3 +348,61 @@ def test_logout_only_ends_the_current_session(
 
 def test_logout_requires_an_authenticated_session(client: TestClient) -> None:
     assert client.post(LOGOUT_URL).status_code == 401
+
+
+# --- Déconnexion de tous les appareils -------------------------------------------
+
+
+def test_logout_all_revokes_the_sessions_of_every_device(
+    make_client: Callable[[], TestClient],
+    registered_user: dict[str, str],
+    access_token_db: FakeAccessTokenDatabase,
+) -> None:
+    laptop, phone = make_client(), make_client()
+    login(laptop, registered_user["email"], registered_user["password"])
+    login(phone, registered_user["email"], registered_user["password"])
+    assert len(access_token_db.tokens) == 2
+
+    response = laptop.post(LOGOUT_ALL_URL)
+
+    assert response.status_code == 204
+    assert response.content == b""
+    assert access_token_db.tokens == {}
+    assert laptop.get(ME_URL).status_code == 401
+    assert phone.get(ME_URL).status_code == 401
+
+
+def test_logout_all_clears_the_cookie_of_the_calling_device(
+    client: TestClient, registered_user: dict[str, str]
+) -> None:
+    login(client, registered_user["email"], registered_user["password"])
+
+    response = client.post(LOGOUT_ALL_URL)
+
+    cookie = response.headers["set-cookie"].lower()
+    assert cookie.startswith(f"{SESSION_COOKIE_NAME}=")
+    assert "max-age=0" in cookie
+
+
+def test_logout_all_does_not_end_the_sessions_of_other_users(
+    make_client: Callable[[], TestClient], valid_password: str
+) -> None:
+    alice, bob = make_client(), make_client()
+    for client, email in ((alice, "alice@example.com"), (bob, "bob@example.com")):
+        client.post(REGISTER_URL, json={"email": email, "password": valid_password})
+        login(client, email, valid_password)
+
+    alice.post(LOGOUT_ALL_URL)
+
+    assert alice.get(ME_URL).status_code == 401
+    assert bob.get(ME_URL).status_code == 200
+
+
+def test_logout_all_requires_an_authenticated_session(client: TestClient) -> None:
+    assert client.post(LOGOUT_ALL_URL).status_code == 401
+
+
+def test_logout_all_rejects_a_forged_session_token(client: TestClient) -> None:
+    client.cookies.set(SESSION_COOKIE_NAME, "forged-token")
+
+    assert client.post(LOGOUT_ALL_URL).status_code == 401

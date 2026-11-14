@@ -16,6 +16,10 @@ SESSION_COOKIE_PATH: Final = "/"
 SESSION_COOKIE_HTTPONLY: Final = True
 SESSION_COOKIE_SAMESITE: Final = "lax"
 
+# Code d'erreur renvoyé à la connexion : le même pour un email inconnu, un mauvais mot de passe
+# ou un compte désactivé (pas d'énumération de comptes).
+INVALID_CREDENTIALS_CODE: Final = "LOGIN_BAD_CREDENTIALS"
+
 # Routes
 AUTH_BACKEND_NAME: Final = "cookie"
 AUTH_ROUTER_PREFIX: Final = "/auth"

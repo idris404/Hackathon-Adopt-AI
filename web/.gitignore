@@ -4,3 +4,4 @@ backend/.venv
 .venv
 __pycache__
 dependencies/volume
+.claude/settings.json

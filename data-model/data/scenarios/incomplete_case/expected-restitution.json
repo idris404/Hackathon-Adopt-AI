@@ -26,6 +26,12 @@
   "assays": [
     {"assay_id": "ASSAY-004", "serum_id": "SER-003", "source_result": null, "result_availability": "missing"}
   ],
+  "current_result_summary": {
+    "serum_id": "SER-003",
+    "current_source_results": [],
+    "current_result": null,
+    "status": "data_missing"
+  },
   "history_pattern": "indeterminate",
   "history_pattern_status": "pending_review",
   "trend": "indeterminate",

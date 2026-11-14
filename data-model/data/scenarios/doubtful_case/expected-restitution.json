@@ -1,0 +1,39 @@
+{
+  "case_id": "SYN-CASE-003",
+  "synthetic": true,
+  "phase": "pre_transplant",
+  "profile": {
+    "profile_score": null,
+    "score_status": "pending_review",
+    "proposed_risk_category": "uncertain",
+    "category_status": "pending_review",
+    "factors": [
+      {"factor_id": "PF-01", "availability": "known", "source_value": 48, "contribution": null, "rule_status": "pending_review", "justification": "Age rule awaits Ahmed's validation."},
+      {"factor_id": "PF-02", "availability": "known", "source_value": 0, "contribution": null, "rule_status": "pending_review", "justification": "Pregnancy rule awaits Ahmed's validation."},
+      {"factor_id": "PF-03", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Diabetes contribution is undefined."},
+      {"factor_id": "PF-04", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Hypertension contribution is undefined."},
+      {"factor_id": "PF-05", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Autoimmune disease contribution is undefined."},
+      {"factor_id": "PF-06", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "Previous transplant contribution is undefined."},
+      {"factor_id": "PF-07", "availability": "known", "source_value": {"count": 0, "frequency": "none"}, "contribution": null, "rule_status": "pending_review", "justification": "Transfusion rule awaits Ahmed's validation."},
+      {"factor_id": "PF-08", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "CAR-T contribution is undefined."},
+      {"factor_id": "PF-09", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "Other antibody-based treatment contribution is undefined."}
+    ],
+    "missing_data": []
+  },
+  "assays": [
+    {"assay_id": "ASSAY-005", "serum_id": "SER-004", "source_result": "doubtful", "result_availability": "present"},
+    {"assay_id": "ASSAY-006", "serum_id": "SER-005", "source_result": "doubtful", "result_availability": "present"}
+  ],
+  "current_result_summary": {"serum_id": "SER-005", "current_source_results": ["doubtful"], "current_result": "doubtful", "status": "source_consistent"},
+  "history_pattern": "doubtful_constant",
+  "history_pattern_status": "pending_review",
+  "trend": "stable",
+  "discordances": [],
+  "review_status": "human_review_required",
+  "candidate_for_simplified_review": false,
+  "triggered_rules": ["SAFE-002", "SAFE-003", "SAFE-004"],
+  "ruleset_version": "DEMO-PENDING-0.1.0",
+  "uncertainties": ["A doubtful result has no automatic interpretation.", "The definition of a constant history is pending review."],
+  "human_validation_required": true,
+  "provenance": {"source_record_copied": false, "generator_version": "manual-fixture-v1"}
+}

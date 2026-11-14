@@ -214,6 +214,7 @@ def _validate_restitution(
             "phase",
             "profile",
             "assays",
+            "current_result_summary",
             "history_pattern",
             "history_pattern_status",
             "trend",
@@ -326,6 +327,54 @@ def _validate_restitution(
             if missing_path not in missing_paths:
                 errors.append(f"restitution.profile.missing_data: must include {missing_path}")
 
+    serums = source.get("serums", [])
+    dated_serums: list[tuple[datetime, dict[str, Any]]] = []
+    for serum in serums:
+        if not isinstance(serum, dict):
+            continue
+        collected_at = serum.get("collected_at")
+        if not isinstance(collected_at, str):
+            continue
+        try:
+            dated_serums.append((datetime.fromisoformat(collected_at.replace("Z", "+00:00")), serum))
+        except ValueError:
+            continue
+
+    summary = restitution.get("current_result_summary")
+    if not isinstance(summary, dict):
+        errors.append("restitution.current_result_summary: expected an object")
+    elif dated_serums:
+        latest_serum = max(dated_serums, key=lambda item: item[0])[1]
+        latest_results = sorted(
+            {
+                assay.get("source_result")
+                for assay in latest_serum.get("assays", [])
+                if isinstance(assay, dict)
+                and assay.get("result_availability") == "present"
+                and assay.get("source_result") in SOURCE_RESULTS
+            }
+        )
+        if not latest_results:
+            expected_result = None
+            expected_status = "data_missing"
+        elif len(latest_results) == 1:
+            expected_result = latest_results[0]
+            expected_status = "source_consistent"
+        else:
+            expected_result = None
+            expected_status = "discordance_unresolved"
+        expected_summary = {
+            "serum_id": latest_serum.get("serum_id"),
+            "current_source_results": latest_results,
+            "current_result": expected_result,
+            "status": expected_status,
+        }
+        for key, expected_value in expected_summary.items():
+            if summary.get(key) != expected_value:
+                errors.append(
+                    f"restitution.current_result_summary.{key}: expected {expected_value!r} from the latest serum"
+                )
+
     all_assays_negative = bool(source_assays) and all(
         assay.get("result_availability") == "present" and assay.get("source_result") == "negative"
         for assay in source_assays.values()
@@ -347,6 +396,15 @@ def validate_scenario_pair(source: dict[str, Any], restitution: dict[str, Any]) 
     restitution_copy = deepcopy(restitution)
     source_assays = _validate_source(source_copy, errors)
     _validate_restitution(source_copy, restitution_copy, source_assays, errors)
+    if errors:
+        raise ValidationError(errors)
+
+
+def validate_source_case(source: dict[str, Any]) -> None:
+    """Validate one synthetic source case without producing an interpretation."""
+
+    errors: list[str] = []
+    _validate_source(deepcopy(source), errors)
     if errors:
         raise ValidationError(errors)
 

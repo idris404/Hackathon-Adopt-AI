@@ -19,11 +19,15 @@ Twin hackathon demonstrator. All records are synthetic and deterministic.
 data-model/
 ├── data/
 │   ├── dictionary.csv
+│   ├── generated/
+│   │   └── README.md
 │   └── scenarios/
 │       ├── complete_case/
-│       │   ├── source.json
-│       │   └── expected-restitution.json
-│       └── incomplete_case/
+│       ├── incomplete_case/
+│       ├── doubtful_case/
+│       ├── discordant_case/
+│       ├── contradictory_profile_case/
+│       └── fluctuating_case/
 │           ├── source.json
 │           └── expected-restitution.json
 ├── protocols/
@@ -32,6 +36,7 @@ data-model/
 │   ├── source-case.schema.json
 │   └── restitution.schema.json
 ├── src/hla_data_model/
+│   ├── generator.py
 │   └── validator.py
 └── tests/
     └── test_validation.py
@@ -49,17 +54,32 @@ PYTHONPATH=src python3 -m unittest discover -s tests -v
 PYTHONPATH=src python3 -m hla_data_model.validator data/scenarios
 ```
 
+Generate non-representative source cases for interface testing:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.generator \
+  --count 100 \
+  --seed 20261114 \
+  --output data/generated/source-cases.jsonl
+```
+
+The generator never produces a score, risk category, interpretation, decision,
+expected restitution, or performance label.
+
 The project has no runtime dependency outside the Python standard library.
 
 ## Current acceptance criteria
 
-- both canonical scenario pairs validate;
+- all six canonical scenario pairs validate;
 - identifiers and ISO 8601 timestamps are stable;
 - `synthetic` and `human_validation_required` are always `true`;
 - source-result absence remains explicit and distinct from `negative`;
 - an incomplete factor appears in the restitution's `missing_data` list;
 - no simplified-review candidate is emitted while the ruleset is unvalidated;
-- source inputs do not contain derived scores or risk categories.
+- source inputs do not contain derived scores or risk categories;
+- current source results are preserved before history pattern and trend;
+- discordant results from one serum remain unresolved;
+- generated volume data contains inputs only and is not representative.
 
 ## Deferred decisions
 

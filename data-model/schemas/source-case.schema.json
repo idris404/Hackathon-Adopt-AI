@@ -117,7 +117,7 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"const": "manual-fixture-v1"}
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1"]}
       }
     }
   },
@@ -149,7 +149,19 @@
       "required": ["availability", "value"],
       "properties": {
         "availability": {"$ref": "#/$defs/availability"},
-        "value": {"type": ["boolean", "null"]}
+        "value": {"type": ["boolean", "null"]},
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "recorded_at"],
+            "properties": {
+              "value": {"type": "boolean"},
+              "recorded_at": {"type": "string", "format": "date-time"}
+            }
+          }
+        }
       }
     }
   }

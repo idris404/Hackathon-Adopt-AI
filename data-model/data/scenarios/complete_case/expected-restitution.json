@@ -25,6 +25,12 @@
     {"assay_id": "ASSAY-002", "serum_id": "SER-001", "source_result": "negative", "result_availability": "present"},
     {"assay_id": "ASSAY-003", "serum_id": "SER-002", "source_result": "negative", "result_availability": "present"}
   ],
+  "current_result_summary": {
+    "serum_id": "SER-002",
+    "current_source_results": ["negative"],
+    "current_result": "negative",
+    "status": "source_consistent"
+  },
   "history_pattern": "negative_constant",
   "history_pattern_status": "pending_review",
   "trend": "stable",

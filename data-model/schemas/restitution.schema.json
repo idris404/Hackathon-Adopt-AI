@@ -10,6 +10,7 @@
     "phase",
     "profile",
     "assays",
+    "current_result_summary",
     "history_pattern",
     "history_pattern_status",
     "trend",
@@ -89,7 +90,24 @@
         }
       }
     },
-    "history_pattern": {"enum": ["negative_constant", "evolving", "fluctuating", "indeterminate"]},
+    "current_result_summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["serum_id", "current_source_results", "current_result", "status"],
+      "properties": {
+        "serum_id": {"type": "string"},
+        "current_source_results": {
+          "type": "array",
+          "items": {"enum": ["negative", "positive", "doubtful"]},
+          "uniqueItems": true
+        },
+        "current_result": {"enum": ["negative", "positive", "doubtful", null]},
+        "status": {"enum": ["source_consistent", "discordance_unresolved", "data_missing"]}
+      }
+    },
+    "history_pattern": {
+      "enum": ["negative_constant", "positive_constant", "doubtful_constant", "evolving", "fluctuating", "indeterminate"]
+    },
     "history_pattern_status": {"enum": ["pending_review", "validated"]},
     "trend": {"enum": ["increasing", "decreasing", "stable", "indeterminate"]},
     "discordances": {"type": "array", "items": {"type": "object"}},
@@ -105,7 +123,7 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"const": "manual-fixture-v1"}
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1"]}
       }
     }
   }

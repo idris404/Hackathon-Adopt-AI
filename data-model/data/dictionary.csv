@@ -21,6 +21,9 @@ serums[].assays[].test_type,source,enum,true,screening|single_antigen,Demonstrat
 serums[].assays[].manufacturer,source,string,true,Immucor,Demonstrator manufacturer,validated_functional
 serums[].assays[].result_availability,source,enum,true,present|missing,Separates missing data from a negative result,validated_functional
 serums[].assays[].source_result,source,enum|null,true,negative|positive|doubtful|null,Unmodified source result category,validated_functional
+current_result_summary.current_source_results,restitution,array,true,negative|positive|doubtful,Distinct source categories on the latest serum,validated_functional
+current_result_summary.current_result,restitution,enum|null,true,negative|positive|doubtful|null,Single source category only when latest-serum results agree,validated_functional
+current_result_summary.status,restitution,enum,true,source_consistent|discordance_unresolved|data_missing,Technical aggregation state without clinical arbitration,validated_functional
 profile.profile_score,restitution,integer|null,true,non-negative|null,Derived score; null while weights are unresolved,pending_review
 profile.score_status,restitution,enum,true,pending_review|validated,Review state of the score,pending_review
 profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Proposed category; uncertain in current ruleset,pending_review

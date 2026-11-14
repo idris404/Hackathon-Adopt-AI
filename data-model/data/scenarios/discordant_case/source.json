@@ -1,0 +1,28 @@
+{
+  "case_id": "SYN-CASE-004",
+  "synthetic": true,
+  "schema_version": "0.1.0",
+  "phase": "pre_transplant",
+  "evaluation_time": "2026-11-14T09:00:00Z",
+  "patient_profile": {
+    "age": {"availability": "known", "value": 59},
+    "pregnancy_history": {"availability": "known", "count": 0, "dates": []},
+    "transfusion_history": {"availability": "known", "count": 0, "dates": [], "frequency": "none"},
+    "diabetes": {"availability": "known", "value": false},
+    "hypertension": {"availability": "known", "value": false},
+    "autoimmune_disease": {"availability": "known", "value": false},
+    "previous_transplants": {"availability": "known", "events": []},
+    "antibody_based_treatments": {"availability": "known", "events": []}
+  },
+  "serums": [
+    {
+      "serum_id": "SER-006",
+      "collected_at": "2026-11-12T08:00:00Z",
+      "assays": [
+        {"assay_id": "ASSAY-007", "test_type": "screening", "manufacturer": "Immucor", "result_availability": "present", "source_result": "negative", "performed_at": "2026-11-12T12:00:00Z", "kit_reference": "SYN-IMM-SCREEN-A", "lot": "SYN-LOT-006", "quality_status": "pending_review"},
+        {"assay_id": "ASSAY-008", "test_type": "single_antigen", "manufacturer": "Immucor", "result_availability": "present", "source_result": "positive", "performed_at": "2026-11-12T13:00:00Z", "kit_reference": "SYN-IMM-SA-A", "lot": "SYN-LOT-007", "quality_status": "pending_review"}
+      ]
+    }
+  ],
+  "provenance": {"source_record_copied": false, "generator_version": "manual-fixture-v1"}
+}

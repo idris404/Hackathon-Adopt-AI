@@ -18,6 +18,16 @@
       "rule_id": "SAFE-003",
       "description": "An unvalidated rule cannot produce a favorable automated output.",
       "status": "active"
+    },
+    {
+      "rule_id": "SAFE-004",
+      "description": "Source results are preserved before any longitudinal description.",
+      "status": "active"
+    },
+    {
+      "rule_id": "SAFE-005",
+      "description": "A simplified-review candidate still requires explicit human confirmation.",
+      "status": "active"
     }
   ],
   "proposed_medical_rules": [
@@ -34,6 +44,7 @@
     "PF-09",
     "HISTORY-NEGATIVE-CONSTANT",
     "DISCORDANCE-ARBITRATION",
+    "TREND-CLASSIFICATION",
     "SCORE-ABOVE-SIX"
   ]
 }

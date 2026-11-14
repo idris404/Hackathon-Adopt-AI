@@ -107,7 +107,7 @@
       "additionalProperties": false,
       "required": ["serum_id", "current_source_results", "current_result", "status"],
       "properties": {
-        "serum_id": {"type": "string"},
+        "serum_id": {"type": ["string", "null"]},
         "current_source_results": {
           "type": "array",
           "items": {"enum": ["negative", "positive", "doubtful"]},

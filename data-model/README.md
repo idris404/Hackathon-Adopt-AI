@@ -37,6 +37,7 @@ data-model/
 │   └── restitution.schema.json
 ├── src/hla_data_model/
 │   ├── generator.py
+│   ├── history_analyzer.py
 │   ├── profile_analyzer.py
 │   └── validator.py
 └── tests/
@@ -92,6 +93,14 @@ facts. It creates PF-01 through PF-09, preserves non-scored context, and reports
 missing or contradictory fields. It deliberately returns a null score, an
 `uncertain` category, and null contributions while the medical rules remain
 unvalidated.
+
+## History analyzer
+
+`history_analyzer.py` preserves every source result, identifies the latest
+serum, exposes missing results and same-serum discordances, and describes
+constant, evolving, fluctuating, or indeterminate histories. It emits `stable`
+only for repeated identical source categories. It never emits `increasing` or
+`decreasing` without a validated ordinal or quantitative rule.
 
 The project has no runtime dependency outside the Python standard library.
 

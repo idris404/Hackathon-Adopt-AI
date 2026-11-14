@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .history_analyzer import HistoryAnalysisError, analyze_history
+
 
 RULESET_VERSION = "DEMO-PENDING-0.1.0"
 SOURCE_RESULTS = {"negative", "positive", "doubtful"}
@@ -467,6 +469,29 @@ def _validate_restitution(
         errors.append("restitution.history_pattern: negative_constant requires every available assay to be present and negative")
     if restitution.get("history_pattern_status") != "pending_review":
         errors.append("restitution.history_pattern_status: must remain pending_review")
+
+    try:
+        analyzed_history = analyze_history(source.get("serums", []))
+    except HistoryAnalysisError as error:
+        errors.append(f"source.serums: {error}")
+    else:
+        for key in (
+            "assays",
+            "current_result_summary",
+            "history_pattern",
+            "history_pattern_status",
+            "trend",
+            "discordances",
+        ):
+            if restitution.get(key) != analyzed_history[key]:
+                errors.append(f"restitution.{key}: must match the deterministic history analysis")
+        restitution_history_missing = [
+            item
+            for item in profile.get("missing_data", [])
+            if isinstance(item, dict) and (item.get("path") == "serums" or str(item.get("path", "")).startswith("serums."))
+        ]
+        if restitution_history_missing != analyzed_history["missing_data"]:
+            errors.append("restitution.profile.missing_data: history entries must match the deterministic analysis")
 
 
 def validate_scenario_pair(source: dict[str, Any], restitution: dict[str, Any]) -> None:

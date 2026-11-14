@@ -43,6 +43,7 @@ from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
 from app.main import app  # noqa: E402
 from app.patients.entity import Patient  # noqa: E402
 from app.patients.repository import PatientCriteria  # noqa: E402
+from app.serum_tests.entity import SerumTest
 from app.synthetic_patients.entity import SyntheticPatient  # noqa: E402
 from app.synthetic_patients.repository import SyntheticPatientCriteria  # noqa: E402
 from app.synthetic_patients.seed import SYNTHETIC_CSV_COLUMNS  # noqa: E402
@@ -176,7 +177,32 @@ def make_patient(**overrides: object) -> Patient:
         "country": "France",
         "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
     }
-    return Patient(**(values | overrides))
+    patient = Patient(**(values | overrides))
+    patient.serum_tests = []
+    return patient
+
+
+def make_serum_test(patient: Patient, **overrides: object) -> SerumTest:
+    """Un test sérique fictif, lié au patient par son `patient_id`."""
+    values: dict[str, object] = {
+        "id": uuid.uuid4(),
+        "patient_id": patient.patient_id,
+        "graft_date": date(2016, 8, 4),
+        "test_date": date(2017, 12, 9),
+        "b12": 40,
+        "b12_output": 0,
+        "b13": 190,
+        "b13_output": 0,
+        "dr53": 291,
+        "dr53_output": 0,
+        "dr51": 177,
+        "dr51_output": 0,
+        "dq10": 1870,
+        "dq10_output": 1,
+        "profile": "C",
+        "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
+    }
+    return SerumTest(**(values | overrides))
 
 
 UNKNOWN_CSV_COLUMN = "colonne_inconnue_de_la_table"
@@ -228,6 +254,18 @@ class FakePatientRepository:
         known = {values["patient_id"] for values in self.stored.values()}
         known |= {patient.patient_id for patient in self.patients}
         return set(patient_ids) & known
+
+    async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
+        self.batches.append(len(values))
+        return insert_ignoring_existing(self.stored, values)
+
+
+class FakeSerumTestRepository:
+    """Remplace SerumTestRepository (même principe que FakePatientRepository)."""
+
+    def __init__(self) -> None:
+        self.stored: dict[uuid.UUID, Mapping[str, object]] = {}
+        self.batches: list[int] = []
 
     async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
         self.batches.append(len(values))

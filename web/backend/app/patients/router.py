@@ -24,7 +24,10 @@ async def list_patients(
     query: Annotated[PatientListQuery, Query()],
     service: PatientService = Depends(get_patient_service),
 ) -> Page[PatientRead]:
-    """Liste paginée. Recherche (`search`), filtres, tri (`sort_by`, `sort_order`) : côté serveur."""
+    """Liste paginée, chaque patient avec ses tests sériques.
+
+    Recherche (`search`), filtres, tri (`sort_by`, `sort_order`) : côté serveur.
+    """
     return await service.list_patients(query)
 
 
@@ -34,7 +37,7 @@ async def list_patients(
     responses={status.HTTP_404_NOT_FOUND: {"description": "Patient not found."}},
 )
 async def get_patient(
-    # `{id}` : l'UUID du patient. Pas `patient_id`, qui est son identifiant fonctionnel (« SYN-0001 »).
+    # `{id}` : l'UUID du patient. Pas `patient_id`, qui est son identifiant fonctionnel (« HIS-00355 »).
     patient_uuid: Annotated[uuid.UUID, Path(alias="id")],
     service: PatientService = Depends(get_patient_service),
 ) -> PatientRead:

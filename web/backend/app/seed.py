@@ -1,15 +1,17 @@
-"""Seed de la base : peuple `patients` puis `patients_synthetiques` depuis le CSV synthétique.
+"""Seed de la base : patients, patients synthétiques, puis historique sérique.
 
-    uv run python -m app.seed [--csv CHEMIN] [--only patients|synthetic] [--reset]
+    uv run python -m app.seed [--csv CHEMIN] [--serum-csv CHEMIN]
+        [--only patients|synthetic|serum] [--reset]
                                                                       (depuis web/backend/)
 
-Les patients synthétiques partent des patients (liés par `patient_id`) : l'étape `patients` passe
-d'abord. `--only synthetic` ne relance que la seconde, à condition que les patients existent déjà.
-Rejouable : ce qui est déjà présent n'est pas dupliqué. Une seule transaction : tout ou rien.
+Les patients synthétiques et les tests sériques partent des patients (liés par `patient_id`,
+ex. « HIS-00355 ») : l'étape `patients` passe d'abord. `--only synthetic` ou `--only serum`
+ne relance que cette étape, à condition que les patients existent déjà. Rejouable : ce qui
+est déjà présent n'est pas dupliqué. Une seule transaction : tout ou rien.
 
 Il n'y a pas d'outil de migration : si le schéma d'une table a changé depuis sa création, le seed
-refuse de continuer. `--reset` supprime alors les deux tables et les recrée (leurs données se
-régénèrent depuis le CSV ; les identifiants `id` sont les mêmes qu'avant).
+refuse de continuer. `--reset` supprime alors les trois tables et les recrée (leurs données se
+régénèrent depuis les CSV ; les identifiants `id` sont les mêmes qu'avant).
 """
 
 import argparse
@@ -21,41 +23,54 @@ from pathlib import Path
 
 from sqlalchemy import Connection, Table, inspect
 
-from app.constants.seed import DEFAULT_PATIENTS_CSV_PATH, SeedStage
+from app.constants.seed import (
+    DEFAULT_PATIENTS_CSV_PATH,
+    DEFAULT_SERUM_HISTORY_CSV_PATH,
+    SeedStage,
+)
 from app.core.database import Base, async_session_maker, engine
 from app.core.exceptions import SeedError
 from app.patients.entity import Patient
 from app.patients.repository import PatientRepository
 from app.patients.seed import PatientSeedReport, seed_patients
 from app.patients.services import PatientService
+from app.serum_tests.entity import SerumTest
+from app.serum_tests.repository import SerumTestRepository
+from app.serum_tests.seed import SerumSeedReport, seed_serum_tests
 from app.synthetic_patients.entity import SyntheticPatient
 from app.synthetic_patients.repository import SyntheticPatientRepository
 from app.synthetic_patients.seed import SyntheticSeedReport, seed_synthetic_patients
 
-# Ordre de création (les patients d'abord : la clé étrangère des synthétiques pointe vers eux).
-TABLES: Sequence[Table] = (Patient.__table__, SyntheticPatient.__table__)
+# Ordre de création (les patients d'abord : les clés étrangères pointent vers eux).
+TABLES: Sequence[Table] = (Patient.__table__, SyntheticPatient.__table__, SerumTest.__table__)
 
 
 @dataclass(frozen=True)
 class SeedReport:
     patients: PatientSeedReport | None  # None : étape non exécutée
     synthetic_patients: SyntheticSeedReport | None
+    serum_tests: SerumSeedReport | None = None
 
 
 async def run_seed(
     csv_path: Path,
     patient_repository: PatientRepository,
     synthetic_repository: SyntheticPatientRepository,
+    serum_repository: SerumTestRepository,
     only: SeedStage | None = None,
+    serum_csv_path: Path | None = None,
 ) -> SeedReport:
-    patients_report = synthetic_report = None
+    patients_report = synthetic_report = serum_report = None
+    patients = PatientService(patient_repository)
     if only in (None, SeedStage.PATIENTS):
         patients_report = await seed_patients(patient_repository, csv_path)
     if only in (None, SeedStage.SYNTHETIC_PATIENTS):
-        synthetic_report = await seed_synthetic_patients(
-            synthetic_repository, PatientService(patient_repository), csv_path
-        )
-    return SeedReport(patients_report, synthetic_report)
+        synthetic_report = await seed_synthetic_patients(synthetic_repository, patients, csv_path)
+    if only in (None, SeedStage.SERUM_TESTS):
+        if serum_csv_path is None:
+            raise SeedError("chemin du CSV d'historique sérique manquant")
+        serum_report = await seed_serum_tests(serum_repository, patients, serum_csv_path)
+    return SeedReport(patients_report, synthetic_report, serum_report)
 
 
 def find_outdated_tables(connection: Connection) -> list[str]:
@@ -79,21 +94,29 @@ async def prepare_tables(reset: bool) -> None:
         if outdated:
             raise SeedError(
                 f"schéma obsolète pour {', '.join(outdated)} : relancer avec --reset "
-                "(recrée les tables patients et patients_synthetiques ; leurs données se "
-                "régénèrent depuis le CSV)"
+                "(recrée les tables patients, patients_synthetiques et serum_tests ; leurs "
+                "données se régénèrent depuis les CSV)"
             )
         await connection.run_sync(Base.metadata.create_all, tables=TABLES)
 
 
 async def main(
-    csv_path: Path, only: SeedStage | None = None, reset: bool = False
+    csv_path: Path,
+    serum_csv_path: Path,
+    only: SeedStage | None = None,
+    reset: bool = False,
 ) -> SeedReport:
     try:
         await prepare_tables(reset)
         # Une seule transaction : tout ou rien, un CSV invalide en cours de route n'insère rien.
         async with async_session_maker() as session, session.begin():
             return await run_seed(
-                csv_path, PatientRepository(session), SyntheticPatientRepository(session), only
+                csv_path,
+                PatientRepository(session),
+                SyntheticPatientRepository(session),
+                SerumTestRepository(session),
+                only,
+                serum_csv_path,
             )
     finally:
         await engine.dispose()
@@ -113,17 +136,25 @@ def describe(report: SeedReport) -> list[str]:
             f"patients synthétiques : {synthetic.read} lignes lues, {synthetic.inserted} insérés, "
             f"{already} déjà présents, {synthetic.without_patient} sans patient (ignorés)"
         )
+    if report.serum_tests:
+        serum = report.serum_tests
+        already = serum.read - serum.without_patient - serum.inserted
+        lines.append(
+            f"tests sériques : {serum.read} lignes lues, {serum.inserted} insérés, "
+            f"{already} déjà présents, {serum.without_patient} sans patient (ignorés)"
+        )
     return lines
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Ingère le CSV de patients synthétiques.")
+    parser = argparse.ArgumentParser(description="Ingère les CSV patients, synthétiques et sériques.")
     parser.add_argument("--csv", type=Path, default=DEFAULT_PATIENTS_CSV_PATH)
+    parser.add_argument("--serum-csv", type=Path, default=DEFAULT_SERUM_HISTORY_CSV_PATH)
     parser.add_argument("--only", type=SeedStage, choices=list(SeedStage), default=None)
     parser.add_argument(
         "--reset",
         action="store_true",
-        help="supprime et recrée les tables patients et patients_synthetiques avant le seed",
+        help="supprime et recrée patients, patients_synthetiques et serum_tests avant le seed",
     )
     args = parser.parse_args()
     if args.reset and args.only:
@@ -134,9 +165,9 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     args = parse_args()
     try:
-        report = asyncio.run(main(args.csv, args.only, args.reset))
+        report = asyncio.run(main(args.csv, args.serum_csv, args.only, args.reset))
     except SeedError as error:
         sys.exit(f"erreur : {error}")
     if args.reset:
-        print("tables patients et patients_synthetiques recréées")
+        print("tables patients, patients_synthetiques et serum_tests recréées")
     print("\n".join(describe(report)))

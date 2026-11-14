@@ -15,14 +15,14 @@ Dernière mise à jour : 2026-11-14 · 14 opérations.
 | `POST` | `/auth/logout-all` | Session | Déconnexion de tous les appareils |
 | `GET` · `PATCH` | `/users/me` | Session | Lire / modifier son profil |
 | `GET` · `PATCH` · `DELETE` | `/users/{id}` | Session **superutilisateur** | Gestion d'un utilisateur |
-| `GET` | `/patients` | Session | Liste paginée des patients |
-| `GET` | `/patients/{id}` | Session | Un patient |
+| `GET` | `/patients` | Session | Liste paginée des patients, avec leurs tests sériques |
+| `GET` | `/patients/{id}` | Session | Un patient, avec ses tests sériques |
 | `GET` | `/synthetic-patients` | Session | Liste paginée des patients synthétiques |
 | `GET` | `/patients/{id}/synthetic-patients` | Session | Les patients synthétiques d'un patient |
 
 **Protection « Session »** : cookie `HttpOnly` posé par `POST /auth/login`. Le client doit l'envoyer avec chaque requête (`credentials: "include"`). Sans session valide : `401`.
 
-**Identifiants, à ne pas confondre** : `id` est l'**UUID** d'un patient (clé technique, utilisé dans les URL) ; `patient_id` est son **identifiant fonctionnel** unique, du type `SYN-0001` (utilisé pour la liaison avec les patients synthétiques et dans les filtres). Voir [D-13](api-decisions.md#d-13--la-liaison-se-fait-par-patient_id-pas-par-id).
+**Identifiants, à ne pas confondre** : `id` est l'**UUID** d'un patient (clé technique, utilisé dans les URL) ; `patient_id` est son **identifiant fonctionnel** unique, du type `HIS-00355` ou `SYN-0001` (utilisé pour la liaison avec les patients synthétiques et les tests sériques, et dans les filtres). Voir [D-13](api-decisions.md#d-13--la-liaison-se-fait-par-patient_id-pas-par-id).
 
 ## Conventions communes
 
@@ -124,19 +124,35 @@ Détail du mécanisme (cookie, Argon2id, durée de session) : `CLAUDE.md`, secti
 
 ## Patients
 
-Table `patients` : identité uniquement, aucune donnée clinique. Les prénoms, noms, villes et pays sont **fictifs** ([D-14](api-decisions.md#d-14--identités-fictives-et-déterministes)).
+Table `patients` : identité uniquement. Les prénoms, noms, villes et pays sont **fictifs** ([D-14](api-decisions.md#d-14--identités-fictives-et-déterministes)). Chaque patient embarque ses tests sériques (`serum_tests`), liés par `patient_id`. La liste est vide si aucun historique n'a été seedé pour lui.
+
+L'historique vient de `data-model/data/serum_test_history.csv`. Ce sont des valeurs **synthétiques** de démonstration, pas des résultats biologiques cliniques. `*_output` vaut `1` si la valeur de l'antigène est ≥ 500, sinon `0`.
+
+### Objet `SerumTest`
+
+| Champ | Type | Remarque |
+| --- | --- | --- |
+| `id` | UUID | Déduit de `patient_id` + `test_date` |
+| `patient_id` | texte | Identifiant fonctionnel du patient (ex. `HIS-00355`) |
+| `graft_date`, `test_date` | date ISO | |
+| `b12`, `b13`, `dr53`, `dr51`, `dq10` | entier | Valeur simulée (noms du CSV en minuscules : `B12` → `b12`) |
+| `b12_output`, `b13_output`, `dr53_output`, `dr51_output`, `dq10_output` | `0` \| `1` | Positivité au seuil 500 |
+| `profile` | `A` \| `B` \| `C` | Stabilité complète, fluctuations partielles, très fluctuant |
+
+Les tests d'un patient sont triés par `test_date` croissante.
 
 ### Objet `Patient`
 
 | Champ | Type | Remarque |
 | --- | --- | --- |
 | `id` | UUID | Clé technique ; c'est lui qui est dans les URL |
-| `patient_id` | texte | Identifiant fonctionnel **unique** (ex. `SYN-0001`) |
+| `patient_id` | texte | Identifiant fonctionnel **unique** (ex. `HIS-00355`) |
 | `firstname`, `lastname` | texte | |
 | `birth` | date ISO ou `null` | `null` quand la source n'a pas de date de naissance |
 | `gender` | `M` \| `F` | |
 | `city`, `country` | texte | |
 | `created_at` | date-heure ISO | |
+| `serum_tests` | liste de `SerumTest` | `[]` si le patient n'a pas d'historique |
 
 ### `GET /patients`
 
@@ -150,11 +166,11 @@ Liste paginée. Paramètres, en plus de la pagination ci-dessus :
 | `birth_from`, `birth_to` | date ISO | Bornes **incluses** sur `birth`. Les patients sans date de naissance sont exclus dès qu'une borne est donnée. `birth_from` > `birth_to` → `422` |
 | `sort_by` | `patient_id` \| `firstname` \| `lastname` \| `birth` \| `gender` \| `city` \| `country` \| `created_at` | Défaut : `lastname` |
 
-Réponse `200` : `{items: [Patient], total, page, page_size}`. Erreurs : `401`, `422`.
+Réponse `200` : `{items: [Patient], total, page, page_size}`. Chaque `Patient` contient `serum_tests`. Erreurs : `401`, `422`.
 
 ### `GET /patients/{id}`
 
-Un patient par son UUID. `200` : un `Patient`. Erreurs : `401`, `404 PATIENT_NOT_FOUND`, `422` (`id` n'est pas un UUID ; un `patient_id` comme `SYN-0001` n'est **pas** accepté ici).
+Un patient par son UUID, avec `serum_tests`. `200` : un `Patient`. Erreurs : `401`, `404 PATIENT_NOT_FOUND`, `422` (`id` n'est pas un UUID ; un `patient_id` comme `HIS-00355` n'est **pas** accepté ici).
 
 ---
 

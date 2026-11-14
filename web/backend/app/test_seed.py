@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.conftest import (
     FakePatientRepository,
+    FakeSerumTestRepository,
     FakeSyntheticPatientRepository,
     fake_seed_rows,
     write_seed_csv,
@@ -15,6 +16,7 @@ from app.constants.seed import SeedStage
 from app.patients.seed import PatientSeedReport, patient_uuid_for
 from app.core.database import Base
 from app.seed import TABLES, SeedReport, describe, find_outdated_tables, parse_args, run_seed
+from app.serum_tests.seed import SerumSeedReport
 from app.synthetic_patients.seed import SyntheticSeedReport
 
 pytestmark = pytest.mark.anyio
@@ -37,36 +39,83 @@ def synthetic() -> FakeSyntheticPatientRepository:
     return FakeSyntheticPatientRepository()
 
 
+@pytest.fixture
+def serum() -> FakeSerumTestRepository:
+    return FakeSerumTestRepository()
+
+
+def serum_row(patient_id: str, test_date: str = "2017-12-09") -> dict[str, str]:
+    return {
+        "patient_id": patient_id,
+        "graft_date": "2016-08-04",
+        "test_date": test_date,
+        "B12": "40",
+        "B12_output": "0",
+        "B13": "190",
+        "B13_output": "0",
+        "DR53": "291",
+        "DR53_output": "0",
+        "DR51": "177",
+        "DR51_output": "0",
+        "DQ10": "1870",
+        "DQ10_output": "1",
+        "profile": "C",
+    }
+
+
+@pytest.fixture
+def serum_csv(tmp_path: Path) -> Path:
+    # P-0 existe après l'étape patients ; ABSENT n'a pas de patient.
+    return write_seed_csv(
+        tmp_path / "serum.csv",
+        [serum_row("P-0"), serum_row("ABSENT", test_date="2018-01-01")],
+    )
+
+
 async def test_the_full_seed_creates_the_patients_then_their_synthetic_patients(
-    csv_path: Path, patients: FakePatientRepository, synthetic: FakeSyntheticPatientRepository
+    csv_path: Path,
+    serum_csv: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
 ) -> None:
-    report = await run_seed(csv_path, patients, synthetic)
+    report = await run_seed(csv_path, patients, synthetic, serum, serum_csv_path=serum_csv)
 
     assert report.patients == PatientSeedReport(read=ROWS, inserted=ROWS)
     assert report.synthetic_patients == SyntheticSeedReport(
         read=ROWS, inserted=ROWS, without_patient=0
     )
+    assert report.serum_tests == SerumSeedReport(read=2, inserted=1, without_patient=1)
     # Chaque patient synthétique pointe, par `patient_id`, vers un patient créé par la première étape.
     created = {v["patient_id"] for v in patients.stored.values()}
     assert {v["patient_id"] for v in synthetic.stored.values()} == created
+    assert {v["patient_id"] for v in serum.stored.values()} == {"P-0"}
 
 
 async def test_only_patients_leaves_the_synthetic_patients_alone(
-    csv_path: Path, patients: FakePatientRepository, synthetic: FakeSyntheticPatientRepository
+    csv_path: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
 ) -> None:
-    report = await run_seed(csv_path, patients, synthetic, SeedStage.PATIENTS)
+    report = await run_seed(csv_path, patients, synthetic, serum, SeedStage.PATIENTS)
 
     assert report.synthetic_patients is None
+    assert report.serum_tests is None
     assert len(patients.stored) == ROWS
     assert synthetic.stored == {}
+    assert serum.stored == {}
 
 
 async def test_only_synthetic_starts_from_the_patients_already_there(
-    csv_path: Path, patients: FakePatientRepository, synthetic: FakeSyntheticPatientRepository
+    csv_path: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
 ) -> None:
-    await run_seed(csv_path, patients, synthetic, SeedStage.PATIENTS)
+    await run_seed(csv_path, patients, synthetic, serum, SeedStage.PATIENTS)
 
-    report = await run_seed(csv_path, patients, synthetic, SeedStage.SYNTHETIC_PATIENTS)
+    report = await run_seed(csv_path, patients, synthetic, serum, SeedStage.SYNTHETIC_PATIENTS)
 
     assert report.patients is None
     assert report.synthetic_patients == SyntheticSeedReport(
@@ -75,9 +124,12 @@ async def test_only_synthetic_starts_from_the_patients_already_there(
 
 
 async def test_only_synthetic_without_patients_inserts_nothing(
-    csv_path: Path, patients: FakePatientRepository, synthetic: FakeSyntheticPatientRepository
+    csv_path: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
 ) -> None:
-    report = await run_seed(csv_path, patients, synthetic, SeedStage.SYNTHETIC_PATIENTS)
+    report = await run_seed(csv_path, patients, synthetic, serum, SeedStage.SYNTHETIC_PATIENTS)
 
     assert report.synthetic_patients == SyntheticSeedReport(
         read=ROWS, inserted=0, without_patient=ROWS
@@ -86,16 +138,21 @@ async def test_only_synthetic_without_patients_inserts_nothing(
 
 
 async def test_replaying_the_full_seed_changes_nothing(
-    csv_path: Path, patients: FakePatientRepository, synthetic: FakeSyntheticPatientRepository
+    csv_path: Path,
+    serum_csv: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
 ) -> None:
-    await run_seed(csv_path, patients, synthetic)
+    await run_seed(csv_path, patients, synthetic, serum, serum_csv_path=serum_csv)
 
-    second = await run_seed(csv_path, patients, synthetic)
+    second = await run_seed(csv_path, patients, synthetic, serum, serum_csv_path=serum_csv)
 
     assert second.patients == PatientSeedReport(read=ROWS, inserted=0)
     assert second.synthetic_patients == SyntheticSeedReport(
         read=ROWS, inserted=0, without_patient=0
     )
+    assert second.serum_tests == SerumSeedReport(read=2, inserted=0, without_patient=1)
     assert patient_uuid_for("P-0") in patients.stored
     assert len(synthetic.stored) == ROWS
 
@@ -110,6 +167,14 @@ def test_the_report_tells_what_was_inserted_what_was_there_and_what_was_skipped(
 
     assert "10 lignes lues, 4 insérés, 6 déjà présents" in patients_line
     assert "10 lignes lues, 3 insérés, 5 déjà présents, 2 sans patient" in synthetic_line
+
+
+def test_the_serum_report_counts_rows_without_a_patient() -> None:
+    line = describe(
+        SeedReport(None, None, SerumSeedReport(read=4, inserted=3, without_patient=1))
+    )[0]
+
+    assert "4 lignes lues, 3 insérés, 0 déjà présents, 1 sans patient" in line
 
 
 def test_a_stage_that_did_not_run_is_not_reported() -> None:

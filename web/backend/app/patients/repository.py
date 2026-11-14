@@ -6,12 +6,13 @@ from datetime import date
 from sqlalchemy import ColumnElement, func, or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import InstrumentedAttribute
+from sqlalchemy.orm import InstrumentedAttribute, selectinload
 
 from app.constants.pagination import SortOrder
 from app.constants.patients import Gender, PatientSortField
 from app.core.search import contains, equals_ignoring_case
 from app.patients.entity import Patient
+from app.serum_tests.entity import SerumTest  # noqa: F401 — enregistre la relation
 
 # Tri : liste blanche. Le client envoie un `PatientSortField`, jamais un nom de colonne brut.
 SORT_COLUMNS: dict[PatientSortField, InstrumentedAttribute] = {
@@ -80,6 +81,7 @@ class PatientRepository:
         rows = await self._session.scalars(
             select(Patient)
             .where(*conditions)
+            .options(selectinload(Patient.serum_tests))
             .order_by(direction.nulls_last(), Patient.id)  # `id` : ordre stable entre deux pages
             .offset(criteria.offset)
             .limit(criteria.limit)
@@ -87,7 +89,11 @@ class PatientRepository:
         return list(rows), total or 0
 
     async def get_by_id(self, patient_id: uuid.UUID) -> Patient | None:
-        return await self._session.get(Patient, patient_id)
+        return await self._session.scalar(
+            select(Patient)
+            .where(Patient.id == patient_id)
+            .options(selectinload(Patient.serum_tests))
+        )
 
     async def existing_patient_ids(self, patient_ids: Collection[str]) -> set[str]:
         """Parmi ces `patient_id`, ceux qui correspondent à un patient."""

@@ -2,7 +2,7 @@ name: hackathon-adopt-ai
 
 services:
   postgres:
-    image: ppgvector/pgvector:pg17-trixie
+    image: pgvector/pgvector:pg17-trixie
     container_name: adopt-ai-postgres
     environment:
       POSTGRES_USER: ${DB_USER:-adopt_ai}

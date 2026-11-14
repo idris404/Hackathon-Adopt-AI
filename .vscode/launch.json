@@ -5,7 +5,7 @@
       "name": "dependencies (Docker)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose -f ./dependencies/docker-compose.yml up -d",
+      "command": "docker compose -f ./dependencies/compose.yml up -d",
       "cwd": "${workspaceFolder}"
     },
     {

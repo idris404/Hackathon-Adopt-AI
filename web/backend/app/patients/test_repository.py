@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator
 from datetime import date
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.constants.pagination import SortOrder
@@ -29,6 +30,7 @@ OTHER = uuid.UUID(int=6)
 
 def patient(id: uuid.UUID, firstname: str, lastname: str, **overrides: object) -> Patient:
     values: dict[str, object] = {
+        "patient_id": f"P-{id.int}",  # unique : un par id
         "gender": Gender.MALE,
         "birth": date(1980, 1, 1),
         "city": "Paris",
@@ -45,10 +47,10 @@ async def session() -> AsyncIterator[AsyncSession]:
     async with async_sessionmaker(engine, expire_on_commit=False)() as session:
         session.add_all(
             [
-                patient(DUPONT_JEAN, "Jean", "Dupont", birth=date(1980, 5, 1)),
+                patient(DUPONT_JEAN, "Jean", "Dupont", birth=date(1980, 5, 1), patient_id="SYN-0001"),
                 patient(
                     DUPUIS_JEANNE, "Jeanne", "Dupuis", gender=Gender.FEMALE,
-                    birth=date(1990, 7, 9), city="Lyon",
+                    birth=date(1990, 7, 9), city="Lyon", patient_id="SYN-0002",
                 ),  # fmt: skip
                 patient(
                     DUPONT_MARIE, "Marie", "Dupont", gender=Gender.FEMALE, birth=None,
@@ -101,6 +103,13 @@ async def test_every_word_of_the_search_must_match(repository) -> None:
     assert await ids(repository, search="jean dupont") == {DUPONT_JEAN}
     # L'ordre des mots n'importe pas, prénom et nom se combinent.
     assert await ids(repository, search="dupont jean") == {DUPONT_JEAN}
+
+
+async def test_search_matches_the_patient_id(repository) -> None:
+    assert await ids(repository, search="syn-0001") == {DUPONT_JEAN}
+    assert await ids(repository, search="SYN") == {DUPONT_JEAN, DUPUIS_JEANNE}
+    # Les mots se combinent avec le prénom : « jean » est dans Jean et Jeanne, « 0002 » dans Jeanne.
+    assert await ids(repository, search="jean 0002") == {DUPUIS_JEANNE}
 
 
 async def test_search_does_not_look_at_city_or_country(repository) -> None:
@@ -168,6 +177,14 @@ async def test_unknown_birth_is_always_last(repository, order: SortOrder) -> Non
     assert births == sorted(births, reverse=order is SortOrder.DESC)
 
 
+async def test_sort_by_patient_id(repository) -> None:
+    found, _ = await repository.find(
+        criteria(search="syn", sort_by=PatientSortField.PATIENT_ID, sort_order=SortOrder.DESC)
+    )
+
+    assert [p.patient_id for p in found] == ["SYN-0002", "SYN-0001"]
+
+
 # --- pagination --------------------------------------------------------------------------
 
 
@@ -207,14 +224,22 @@ async def test_get_by_id_of_an_unknown_patient_returns_none(repository) -> None:
     assert await repository.get_by_id(uuid.uuid4()) is None
 
 
-# --- ids existants (utilisés par le seed des patients synthétiques) ----------------------
+# --- patient_id existants (utilisés par le seed des patients synthétiques) --------------
 
 
-async def test_existing_ids_keeps_only_the_ids_of_patients(repository) -> None:
-    unknown = uuid.uuid4()
+async def test_existing_patient_ids_keeps_only_the_ids_of_patients(repository) -> None:
+    assert await repository.existing_patient_ids({"SYN-0001", "SYN-0002", "inconnu"}) == {
+        "SYN-0001",
+        "SYN-0002",
+    }
 
-    assert await repository.existing_ids({DUPONT_JEAN, OTHER, unknown}) == {DUPONT_JEAN, OTHER}
+
+async def test_existing_patient_ids_of_nothing_is_nothing(repository) -> None:
+    assert await repository.existing_patient_ids(set()) == set()
 
 
-async def test_existing_ids_of_nothing_is_nothing(repository) -> None:
-    assert await repository.existing_ids(set()) == set()
+async def test_the_patient_id_is_unique(session: AsyncSession) -> None:
+    session.add(patient(uuid.uuid4(), "Copie", "Conforme", patient_id="SYN-0001"))
+
+    with pytest.raises(IntegrityError):
+        await session.commit()

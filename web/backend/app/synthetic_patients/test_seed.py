@@ -10,17 +10,16 @@ from app.conftest import (
     FakeSyntheticPatientRepository,
     fake_seed_rows,
     fake_synthetic_row,
+    make_patient,
     write_seed_csv,
 )
 from app.constants.patients import Gender
 from app.constants.seed import ASYNCPG_MAX_QUERY_ARGUMENTS, SEED_BATCH_SIZE
 from app.constants.synthetic_patients import (
     SEED_SYNTHETIC_UUID_NAMESPACE,
-    SYNTHETIC_CODE_COLUMN,
     SYNTHETIC_NON_CSV_COLUMNS,
 )
 from app.core.exceptions import SeedError
-from app.patients.seed import patient_id_for
 from app.patients.services import PatientService
 from app.synthetic_patients import seed
 from app.synthetic_patients.entity import SyntheticPatient
@@ -38,21 +37,19 @@ pytestmark = pytest.mark.anyio
 # --- une ligne du CSV --------------------------------------------------------------------
 
 
-def test_a_synthetic_patient_has_every_column_of_the_csv_plus_its_links() -> None:
+def test_a_synthetic_patient_has_every_column_of_the_csv_plus_its_id() -> None:
     values = build_synthetic_values(fake_synthetic_row(), line=2)
 
     table_columns = {column.name for column in SyntheticPatient.__table__.columns}
     assert set(values) == table_columns - {"created_at"}  # `created_at` : défaut du serveur
 
 
-def test_the_csv_patient_id_becomes_the_code_and_the_link_to_its_patient() -> None:
+def test_the_csv_patient_id_is_the_link_to_the_patient() -> None:
     values = build_synthetic_values(fake_synthetic_row(patient_id="P-1"), line=2)
 
-    assert values[SYNTHETIC_CODE_COLUMN] == "P-1"
-    # Le lien vers le patient se déduit du code, comme le fait le seed des patients.
-    assert values["patient_id"] == patient_id_for("P-1")
+    # Le `patient_id` du CSV est repris tel quel : c'est la clé étrangère vers `patients.patient_id`.
+    assert values["patient_id"] == "P-1"
     assert values["id"] == uuid.uuid5(SEED_SYNTHETIC_UUID_NAMESPACE, "P-1")
-    assert values["id"] != values["patient_id"]
 
 
 def test_values_are_converted_to_the_type_of_their_column() -> None:
@@ -69,7 +66,7 @@ def test_values_are_converted_to_the_type_of_their_column() -> None:
 def test_csv_headers_are_matched_to_columns_ignoring_case() -> None:
     assert column_name_for("hla_A") == "hla_a"
     assert column_name_for("_verite_p_rejet") == "_verite_p_rejet"
-    assert column_name_for("patient_id") == SYNTHETIC_CODE_COLUMN
+    assert column_name_for("patient_id") == "patient_id"
 
 
 def test_an_empty_value_is_null_when_the_column_allows_it() -> None:
@@ -82,6 +79,12 @@ def test_an_empty_value_is_null_when_the_column_allows_it() -> None:
 def test_an_empty_value_is_rejected_when_the_column_requires_one() -> None:
     with pytest.raises(SeedError, match="ligne 7 : colonne organe vide"):
         build_synthetic_values(fake_synthetic_row(organe=""), line=7)
+
+
+def test_a_row_without_a_patient_id_is_rejected() -> None:
+    # Sans `patient_id`, pas de lien vers un patient.
+    with pytest.raises(SeedError, match="ligne 7 : colonne patient_id vide"):
+        build_synthetic_values(fake_synthetic_row(patient_id=""), line=7)
 
 
 @pytest.mark.parametrize(
@@ -143,22 +146,21 @@ def test_a_batch_never_exceeds_the_asyncpg_parameter_limit() -> None:
 
 
 def patients_service_knowing(count: int) -> PatientService:
-    """Un service patients qui connaît les patients des codes P-0 … P-(count-1)."""
-    repository = FakePatientRepository()
-    repository.stored = {patient_id_for(f"P-{n}"): {} for n in range(count)}
-    return PatientService(repository)
+    """Un service patients dont les seuls patients ont les `patient_id` P-0 … P-(count-1)."""
+    patients = [make_patient(patient_id=f"P-{n}") for n in range(count)]
+    return PatientService(FakePatientRepository(patients))
 
 
-async def test_every_row_whose_patient_exists_is_attached_to_it(tmp_path: Path) -> None:
+async def test_every_row_whose_patient_exists_is_inserted_with_its_patient_id(
+    tmp_path: Path,
+) -> None:
     path = write_seed_csv(tmp_path / "patients.csv", fake_seed_rows(3))
     repository = FakeSyntheticPatientRepository()
 
     report = await seed_synthetic_patients(repository, patients_service_knowing(3), path)
 
     assert (report.read, report.inserted, report.without_patient) == (3, 3, 0)
-    assert {v["patient_id"] for v in repository.stored.values()} == {
-        patient_id_for(f"P-{n}") for n in range(3)
-    }
+    assert {v["patient_id"] for v in repository.stored.values()} == {"P-0", "P-1", "P-2"}
 
 
 async def test_a_row_without_a_patient_is_counted_and_not_inserted(tmp_path: Path) -> None:
@@ -168,7 +170,7 @@ async def test_a_row_without_a_patient_is_counted_and_not_inserted(tmp_path: Pat
     report = await seed_synthetic_patients(repository, patients_service_knowing(2), path)
 
     assert (report.read, report.inserted, report.without_patient) == (5, 2, 3)
-    assert {v["code_synthetique"] for v in repository.stored.values()} == {"P-0", "P-1"}
+    assert {v["patient_id"] for v in repository.stored.values()} == {"P-0", "P-1"}
 
 
 async def test_without_any_patient_nothing_is_inserted(tmp_path: Path) -> None:

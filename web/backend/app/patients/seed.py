@@ -1,9 +1,9 @@
 """Ingestion de l'identité des patients depuis le CSV synthétique (table `patients`).
 
 Étape 1 du seed (`python -m app.seed`) : les patients synthétiques (contexte `synthetic_patients`)
-partent des patients créés ici. Seules `date_naissance` et `sexe` viennent du CSV : prénom, nom,
-ville et pays n'y existent pas, ils sont fictifs et déterministes. Le message d'une erreur ne
-contient jamais le contenu du fichier.
+partent des patients créés ici, qu'ils retrouvent par leur `patient_id`. Seules `patient_id`,
+`date_naissance` et `sexe` viennent du CSV : prénom, nom, ville et pays n'y existent pas, ils sont
+fictifs et déterministes. Le message d'une erreur ne contient jamais le contenu du fichier.
 """
 
 import random
@@ -38,19 +38,21 @@ class PatientSeedReport:
     inserted: int
 
 
-def patient_id_for(code: str) -> uuid.UUID:
-    """L'id du patient d'une ligne du CSV, déduit de son `patient_id`.
+def patient_uuid_for(code: str) -> uuid.UUID:
+    """La clé primaire (`id`) du patient d'une ligne du CSV, déduite de son `patient_id`.
 
-    Même code → même id, à chaque exécution : c'est ce qui rend le seed rejouable, et ce qui
-    permet à un patient synthétique de retrouver son patient sans colonne supplémentaire.
+    Même `patient_id` → même `id`, à chaque exécution et après un `--reset` : les URL
+    `/patients/{id}` restent valables.
     """
     return uuid.uuid5(SEED_UUID_NAMESPACE, code)
 
 
 def build_patient_values(row: Mapping[str, str | None], line: int) -> dict[str, object]:
     """Une ligne du CSV → les valeurs d'une ligne `patients`. `line` ne sert qu'aux erreurs."""
-    code = (row[CSV_COLUMN_PATIENT_ID] or "").strip()
-    if not code:
+    # Pas de `strip()` sur la valeur : le seed des patients synthétiques lit le même `patient_id`
+    # tel quel, les deux doivent se retrouver.
+    code = row[CSV_COLUMN_PATIENT_ID] or ""
+    if not code.strip():
         raise SeedError(f"ligne {line} : identifiant patient vide")
 
     try:
@@ -70,7 +72,8 @@ def build_patient_values(row: Mapping[str, str | None], line: int) -> dict[str, 
     city, country = rng.choice(SEED_CITIES)
 
     return {
-        "id": patient_id_for(code),
+        "id": patient_uuid_for(code),
+        "patient_id": code,
         "firstname": rng.choice(firstnames),
         "lastname": rng.choice(SEED_LASTNAMES),
         "birth": birth,

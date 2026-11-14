@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.auth.dependencies import current_active_user
 from app.constants.patients import PATIENTS_ROUTER_PREFIX, PATIENTS_ROUTER_TAG
@@ -29,11 +29,13 @@ async def list_patients(
 
 
 @router.get(
-    "/{patient_id}",
+    "/{id}",
     response_model=PatientRead,
     responses={status.HTTP_404_NOT_FOUND: {"description": "Patient not found."}},
 )
 async def get_patient(
-    patient_id: uuid.UUID, service: PatientService = Depends(get_patient_service)
+    # `{id}` : l'UUID du patient. Pas `patient_id`, qui est son identifiant fonctionnel (« SYN-0001 »).
+    patient_uuid: Annotated[uuid.UUID, Path(alias="id")],
+    service: PatientService = Depends(get_patient_service),
 ) -> PatientRead:
-    return await service.get_patient(patient_id)
+    return await service.get_patient(patient_uuid)

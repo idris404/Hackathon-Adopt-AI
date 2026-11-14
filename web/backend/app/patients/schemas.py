@@ -21,11 +21,12 @@ from app.constants.patients import (
 
 
 class PatientRead(BaseModel):
-    """Sortie : un patient."""
+    """Sortie : un patient. `id` est son UUID, `patient_id` son identifiant fonctionnel unique."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    patient_id: str
     firstname: str
     lastname: str
     birth: date | None
@@ -41,7 +42,7 @@ class PatientListQuery(BaseModel):
     # Un paramètre inconnu (faute de frappe : `serach=`) est refusé au lieu d'être ignoré en silence.
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    # Recherche sur le prénom et le nom : chaque mot doit être trouvé (« jean dup »).
+    # Recherche sur le `patient_id`, le prénom et le nom : chaque mot doit être trouvé (« jean dup »).
     search: str | None = Field(default=None, max_length=SEARCH_MAX_LENGTH)
     gender: Gender | None = None
     city: str | None = Field(default=None, max_length=CITY_MAX_LENGTH)

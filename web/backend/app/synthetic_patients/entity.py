@@ -5,13 +5,8 @@ from typing import Annotated
 from sqlalchemy import DateTime, ForeignKey, String, Text, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.constants.patients import PATIENTS_TABLE_NAME
-from app.constants.synthetic_patients import (
-    CATEGORY_MAX_LENGTH,
-    SYNTHETIC_CODE_COLUMN,
-    SYNTHETIC_CODE_MAX_LENGTH,
-    SYNTHETIC_PATIENTS_TABLE_NAME,
-)
+from app.constants.patients import PATIENT_CODE_MAX_LENGTH, PATIENTS_TABLE_NAME
+from app.constants.synthetic_patients import CATEGORY_MAX_LENGTH, SYNTHETIC_PATIENTS_TABLE_NAME
 from app.core.database import Base
 from app.patients.entity import GenderColumn, Patient
 
@@ -23,30 +18,31 @@ FreeText = Annotated[str, mapped_column(Text)]
 class SyntheticPatient(Base):
     """Table `patients_synthetiques` : une ligne du CSV `patients_synthetiques_v3.csv`.
 
-    Mêmes colonnes que le CSV, dans le même ordre, plus `id`, `patient_id` (clé étrangère vers
-    `patients`) et `created_at`. Un patient peut en avoir plusieurs. Les colonnes préfixées par
-    `_` sont les vérités terrain du générateur (résultats à retrouver), pas des données d'entrée.
+    Mêmes colonnes que le CSV, dans le même ordre, plus `id` (clé primaire technique) et
+    `created_at`. `patient_id` est la colonne `patient_id` du CSV et la clé étrangère vers
+    `patients.patient_id` (pas vers `patients.id`) : un patient peut avoir plusieurs patients
+    synthétiques, donc `patient_id` n'est pas unique ici. Les colonnes préfixées par `_` sont les
+    vérités terrain du générateur (résultats à retrouver), pas des données d'entrée.
     Non nullable = colonne toujours renseignée dans le CSV ; nullable = parfois vide.
     """
 
     __tablename__ = SYNTHETIC_PATIENTS_TABLE_NAME
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
-    # Supprimer un patient supprime ses patients synthétiques (côté base).
-    patient_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey(f"{PATIENTS_TABLE_NAME}.id", ondelete="CASCADE"), index=True
-    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+
+    # --- Identification ---
+    # Supprimer un patient supprime ses patients synthétiques (côté base).
+    patient_id: Mapped[str] = mapped_column(
+        String(PATIENT_CODE_MAX_LENGTH),
+        ForeignKey(f"{PATIENTS_TABLE_NAME}.patient_id", ondelete="CASCADE"),
+        index=True,
     )
     # `lazy="raise"` : en asynchrone, un accès implicite échouerait de façon obscure. On charge
     # explicitement (`selectinload`) ou on ne touche pas à la relation.
     patient: Mapped[Patient] = relationship(lazy="raise")
-
-    # --- Identification (la colonne CSV `patient_id` est stockée ici) ---
-    code_synthetique: Mapped[str] = mapped_column(
-        String(SYNTHETIC_CODE_MAX_LENGTH), unique=True, name=SYNTHETIC_CODE_COLUMN
-    )
     jeu: Mapped[Category]
     synthetic: Mapped[bool]
     date_reference: Mapped[date]

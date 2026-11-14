@@ -32,10 +32,10 @@ class PatientService:
             page_size=query.page_size,
         )
 
-    async def existing_ids(self, patient_ids: Collection[uuid.UUID]) -> set[uuid.UUID]:
-        """Parmi ces identifiants, ceux qui sont des patients. API publique du contexte : les
+    async def existing_patient_ids(self, patient_ids: Collection[str]) -> set[str]:
+        """Parmi ces `patient_id`, ceux qui sont des patients. API publique du contexte : les
         autres contextes (patients synthétiques) s'en servent sans toucher à son repository."""
-        return await self._repository.existing_ids(patient_ids)
+        return await self._repository.existing_patient_ids(patient_ids)
 
     async def get_patient(self, patient_id: uuid.UUID) -> PatientRead:
         patient = await self._repository.get_by_id(patient_id)

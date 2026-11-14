@@ -15,6 +15,7 @@ from app.patients.entity import Patient
 
 # Tri : liste blanche. Le client envoie un `PatientSortField`, jamais un nom de colonne brut.
 SORT_COLUMNS: dict[PatientSortField, InstrumentedAttribute] = {
+    PatientSortField.PATIENT_ID: Patient.patient_id,
     PatientSortField.FIRSTNAME: Patient.firstname,
     PatientSortField.LASTNAME: Patient.lastname,
     PatientSortField.BIRTH: Patient.birth,
@@ -24,7 +25,7 @@ SORT_COLUMNS: dict[PatientSortField, InstrumentedAttribute] = {
     PatientSortField.CREATED_AT: Patient.created_at,
 }
 
-SEARCH_COLUMNS = (Patient.firstname, Patient.lastname)
+SEARCH_COLUMNS = (Patient.patient_id, Patient.firstname, Patient.lastname)
 
 
 @dataclass(frozen=True)
@@ -46,7 +47,7 @@ class PatientCriteria:
 def _conditions(criteria: PatientCriteria) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = []
     if criteria.search:
-        # Un mot = une condition (ET) ; chaque mot peut se trouver dans le prénom OU le nom.
+        # Un mot = une condition (ET) ; chaque mot peut se trouver dans le patient_id, le prénom OU le nom.
         for term in criteria.search.split():
             conditions.append(or_(*(contains(column, term) for column in SEARCH_COLUMNS)))
     if criteria.gender:
@@ -88,16 +89,21 @@ class PatientRepository:
     async def get_by_id(self, patient_id: uuid.UUID) -> Patient | None:
         return await self._session.get(Patient, patient_id)
 
-    async def existing_ids(self, patient_ids: Collection[uuid.UUID]) -> set[uuid.UUID]:
-        """Parmi ces identifiants, ceux qui correspondent à un patient."""
+    async def existing_patient_ids(self, patient_ids: Collection[str]) -> set[str]:
+        """Parmi ces `patient_id`, ceux qui correspondent à un patient."""
         if not patient_ids:
             return set()
-        rows = await self._session.scalars(select(Patient.id).where(Patient.id.in_(patient_ids)))
+        rows = await self._session.scalars(
+            select(Patient.patient_id).where(Patient.patient_id.in_(patient_ids))
+        )
         return set(rows)
 
     async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
-        """Insère les patients dont l'id est absent ; renvoie le nombre réellement insérés."""
+        """Insère les patients absents ; renvoie le nombre réellement insérés.
+
+        Un patient est « présent » si son `id` OU son `patient_id` existe déjà (les deux sont uniques).
+        """
         result = await self._session.execute(
-            insert(Patient).values(list(values)).on_conflict_do_nothing(index_elements=["id"])
+            insert(Patient).values(list(values)).on_conflict_do_nothing()
         )
         return result.rowcount

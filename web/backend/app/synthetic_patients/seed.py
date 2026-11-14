@@ -1,9 +1,10 @@
 """Ingestion des patients synthétiques depuis le CSV (table `patients_synthetiques`).
 
-Étape 2 du seed (`python -m app.seed`) : elle part des patients déjà créés par l'étape 1. Pour
-chaque ligne du CSV, l'id du patient se déduit du `patient_id` (`patient_id_for`) ; le service
-`patients` dit lesquels existent, et seuls ceux-là reçoivent leur patient synthétique. Une ligne
-sans patient est comptée, pas insérée (la clé étrangère l'aurait refusée).
+Étape 2 du seed (`python -m app.seed`) : elle part des patients déjà créés par l'étape 1. Chaque
+ligne du CSV est liée à son patient par le `patient_id` (la clé étrangère pointe vers
+`patients.patient_id`) ; le service `patients` dit quels `patient_id` existent, et seules ces
+lignes sont insérées. Une ligne sans patient est comptée, pas insérée (la clé étrangère l'aurait
+refusée).
 
 Toutes les colonnes du CSV sont reprises, avec la conversion de leur type. Une colonne du CSV
 inconnue de la table est ignorée ; une colonne attendue mais absente fait échouer le seed. Le
@@ -19,16 +20,13 @@ from pathlib import Path
 
 from sqlalchemy import Column
 
-from app.constants.seed import CSV_COLUMN_PATIENT_ID, SEED_BATCH_SIZE
+from app.constants.seed import SEED_BATCH_SIZE
 from app.constants.synthetic_patients import (
-    CSV_COLUMN_ALIASES,
     SEED_SYNTHETIC_UUID_NAMESPACE,
-    SYNTHETIC_CODE_COLUMN,
     SYNTHETIC_NON_CSV_COLUMNS,
 )
 from app.core.exceptions import SeedError
 from app.core.seed import read_csv_rows
-from app.patients.seed import patient_id_for
 from app.patients.services import PatientService
 from app.synthetic_patients.entity import SyntheticPatient
 from app.synthetic_patients.repository import SyntheticPatientRepository
@@ -52,8 +50,8 @@ class SyntheticSeedReport:
 
 
 def column_name_for(csv_header: str) -> str:
-    """Nom de colonne en base d'un en-tête du CSV (`hla_A` → `hla_a`, `patient_id` → code)."""
-    return CSV_COLUMN_ALIASES.get(csv_header, csv_header.lower())
+    """Nom de colonne en base d'un en-tête du CSV (`hla_A` → `hla_a`)."""
+    return csv_header.lower()
 
 
 def convert(column: Column, raw: str, line: int) -> object:
@@ -75,15 +73,13 @@ def convert(column: Column, raw: str, line: int) -> object:
 
 
 def build_synthetic_values(row: Mapping[str, str | None], line: int) -> dict[str, object]:
-    """Une ligne du CSV → les valeurs d'une ligne `patients_synthetiques`, rattachée à son patient."""
+    """Une ligne du CSV → les valeurs d'une ligne `patients_synthetiques`."""
     values: dict[str, object] = {}
     for header, raw in row.items():
         column = SYNTHETIC_CSV_COLUMNS.get(column_name_for(header)) if header else None
         if column is not None:  # sinon : colonne du CSV inconnue de la table, ignorée
             values[column.name] = convert(column, raw or "", line)
-    code = str(values[SYNTHETIC_CODE_COLUMN])
-    values["patient_id"] = patient_id_for(code)
-    values["id"] = uuid.uuid5(SEED_SYNTHETIC_UUID_NAMESPACE, code)
+    values["id"] = uuid.uuid5(SEED_SYNTHETIC_UUID_NAMESPACE, str(values["patient_id"]))
     return values
 
 
@@ -104,7 +100,7 @@ async def seed_synthetic_patients(
 ) -> SyntheticSeedReport:
     read = inserted = without_patient = 0
     for batch in batched(read_synthetic_values(csv_path), SEED_BATCH_SIZE):
-        existing = await patients.existing_ids({values["patient_id"] for values in batch})
+        existing = await patients.existing_patient_ids({values["patient_id"] for values in batch})
         attachable = [values for values in batch if values["patient_id"] in existing]
         if attachable:
             inserted += await repository.add_many_ignoring_existing(attachable)

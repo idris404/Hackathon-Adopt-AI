@@ -75,7 +75,7 @@ cp .env.example .env
 | PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Frontend | `npm run dev -- --strictPort` | `web/frontend/` |
-| Seed des patients (CSV synthétique, rejouable) | `uv run python -m app.patients.seed [--csv CHEMIN]` | `web/backend/` |
+| Seed : patients puis patients synthétiques (CSV, rejouable) | `uv run python -m app.seed [--csv CHEMIN] [--only patients\|synthetic] [--reset]` | `web/backend/` |
 
 - Backend : <http://localhost:8000> (documentation OpenAPI sur `/docs`)
 - Frontend : <http://localhost:5173>
@@ -131,8 +131,10 @@ Base URL de l'API : `http://localhost:8000/api/v1` (toutes les routes sont préf
 | `POST /api/v1/auth/logout-all` | Déconnexion de tous les appareils, révoque toutes les sessions de l'utilisateur |
 | `GET /api/v1/users/me`, `PATCH /api/v1/users/me` | Lire et modifier son profil |
 | `GET /api/v1/analysis/result` | Résultat d'analyse du modèle. **Publique** (sans session) : ne renvoie que des données synthétiques |
-| `GET /api/v1/patients` | Liste paginée des patients (session requise). Query : `search` (prénom / nom, mots combinés, sensible aux accents), `gender`, `city`, `country`, `birth_from`, `birth_to`, `sort_by`, `sort_order`, `page`, `page_size` |
-| `GET /api/v1/patients/{id}` | Un patient (session requise) |
+| `GET /api/v1/patients` | Liste paginée des patients (session requise). Query : `search` (`patient_id`, prénom, nom ; mots combinés, sensible aux accents), `gender`, `city`, `country`, `birth_from`, `birth_to`, `sort_by`, `sort_order`, `page`, `page_size` |
+| `GET /api/v1/patients/{id}` | Un patient, par son UUID `id` (session requise) |
+| `GET /api/v1/synthetic-patients` | Liste paginée des patients synthétiques (session requise). Query : `search` (dans le `patient_id`), `patient_id` (exact), `sexe`, `jeu`, `phase`, `statut_parcours`, `organe`, `sort_by`, `sort_order`, `page`, `page_size` |
+| `GET /api/v1/patients/{id}/synthetic-patients` | Les patients synthétiques d'un patient (`id` = son UUID), paginés (session requise). Query : `sort_by`, `sort_order`, `page`, `page_size`. 404 si le patient n'existe pas |
 
 Le frontend doit envoyer le cookie avec chaque requête (`credentials: "include"`). Variables d'environnement dédiées : `DB_HOST`, `FRONTEND_URL`, `COOKIE_SECURE` (voir `.env.example`).
 

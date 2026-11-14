@@ -54,14 +54,22 @@ Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vi
 
 `GET /api/v1/analysis/result` ne demande **aucune authentification** (contexte `backend/app/analysis/`). C'est la seule exception à la règle « données de santé = accès authentifié », et elle ne tient que parce que la réponse est **synthétique** : le schéma `AnalysisResultRead` impose `synthetic: true` (`Literal[True]`) et le service sert pour l'instant le cas de démonstration `DEMO_ANALYSIS_RESULT` (`constants/analysis.py`). Les résultats d'un vrai patient ne doivent jamais passer par cette route : ils iront sur une route authentifiée, avec son propre schéma.
 
-## Patients
+## Patients et patients synthétiques
 
-Contexte `backend/app/patients/`. Deux tables, alimentées par le CSV `data-model/data/patients_synthetiques_v3.csv` (51 000 lignes, **synthétiques**) :
+Deux contextes backend, alimentés par le CSV `data-model/data/patients_synthetiques_v3.csv` (51 000 lignes, **synthétiques**) :
 
-- `patients` : identité (`id` UUID, `firstname`, `lastname`, `birth` nullable, `gender` M/F, `city`, `country`, `created_at`). Le CSV ne contient que `date_naissance` et `sexe` : prénom, nom, ville et pays sont **fictifs**, tirés de listes (`constants/patients.py`) de façon déterministe à partir du `patient_id` du CSV.
-- `patients_synthetiques` : **toutes les colonnes du CSV** (mêmes noms en minuscules, `hla_A` → `hla_a`) + `id`, `patient_id` (clé étrangère vers `patients`, `ON DELETE CASCADE`) et `created_at`. Un patient peut avoir plusieurs patients synthétiques (`Patient.synthetic_records`, chargement explicite requis : `lazy="raise"`). La colonne CSV `patient_id` (« SYN-0001 ») est stockée sous `code_synthetique` (unique), car `patient_id` est la clé étrangère. Les colonnes `_…` du CSV sont les vérités terrain du générateur, pas des entrées. Les colonnes catégorielles sont des `VARCHAR` libres (pas d'enum : les valeurs sont celles du CSV).
-- Seed : `uv run python -m app.patients.seed` (depuis `backend/`). Une ligne du CSV crée 1 patient + 1 patient synthétique rattaché ; rejouable (ids UUID v5 dérivés du `patient_id`), atomique, sans jamais afficher le contenu du fichier. Ajouter une colonne à l'entité `SyntheticPatient` suffit à l'ingérer (la conversion suit le type).
-- Routes (session requise) : `GET /api/v1/patients` (recherche, filtres, tri et pagination côté serveur) et `GET /api/v1/patients/{id}`. Pas encore d'endpoint pour les patients synthétiques.
+- **`patients`** (`backend/app/patients/`) : `id` (UUID, clé primaire technique), **`patient_id`** (identifiant fonctionnel **unique**, la colonne `patient_id` du CSV, ex. « SYN-0001 »), `firstname`, `lastname`, `birth` (nullable), `gender` M/F, `city`, `country`, `created_at`. Le CSV ne contient que `patient_id`, `date_naissance` et `sexe` : prénom, nom, ville et pays sont **fictifs**, tirés de listes (`constants/patients.py`) de façon déterministe à partir du `patient_id`. L'`id` est déduit du `patient_id` (UUID v5) : il ne change pas d'un seed à l'autre.
+- **`synthetic_patients`** (`backend/app/synthetic_patients/`) : table `patients_synthetiques`, **toutes les colonnes du CSV** (mêmes noms en minuscules, `hla_A` → `hla_a`) + `id` (clé primaire technique) et `created_at`. **La liaison se fait par `patient_id`** : `patients_synthetiques.patient_id` est une clé étrangère vers `patients.patient_id` (`ON DELETE CASCADE`), pas vers `patients.id`. Un patient peut avoir plusieurs patients synthétiques (`patient_id` n'est donc pas unique dans cette table ; relation `SyntheticPatient.patient`, chargement explicite requis : `lazy="raise"`). Le CSV a une ligne par `patient_id` : l'`id` d'un patient synthétique en est déduit, deux lignes de même `patient_id` seraient comptées « déjà présentes ». Les colonnes `_…` du CSV sont les vérités terrain du générateur, pas des entrées. Les colonnes catégorielles sont des `VARCHAR` libres (pas d'enum : les valeurs sont celles du CSV).
+
+**Seed** : `uv run python -m app.seed [--csv CHEMIN] [--only patients|synthetic] [--reset]` (depuis `backend/`). Deux étapes, dans cet ordre : (1) les patients, avec leur `patient_id` ; (2) les patients synthétiques **à partir des patients** : le service `patients` (`existing_patient_ids`) dit quels `patient_id` du CSV existent dans `patients`, et seules ces lignes sont insérées (les autres sont comptées « sans patient », pas insérées). Rejouable, atomique (une seule transaction), sans jamais afficher le contenu du fichier. Ajouter une colonne à l'entité `SyntheticPatient` suffit à l'ingérer (la conversion suit le type). Le CSV est lu en lots de 400 lignes : asyncpg refuse plus de 32 767 paramètres par requête (voir `constants/seed.py`).
+
+**Pas de migrations** : `create_all` ne modifie pas une table existante. Si le schéma de `patients` ou `patients_synthetiques` a changé depuis sa création, le seed refuse (« schéma obsolète ») ; `--reset` supprime alors les deux tables et les recrée (leurs données se régénèrent depuis le CSV, avec les mêmes `id`). Le backend (`lifespan`) ne vérifie pas le schéma : après un changement d'entité, relancer le seed avec `--reset`.
+
+**Routes** (session requise, pagination, recherche, filtres et tri côté serveur) :
+
+- `GET /api/v1/patients` (recherche `search` sur `patient_id`, prénom et nom) et `GET /api/v1/patients/{id}`. Dans les URL, `{id}` est l'**UUID** du patient, jamais son `patient_id`.
+- `GET /api/v1/synthetic-patients` : filtres `search` (dans le `patient_id`), `patient_id` (exact, sans tenir compte de la casse), `sexe`, `jeu`, `phase`, `statut_parcours`, `organe` ; tri sur une liste blanche (`sort_by`, `sort_order`) ; réponse `{items, total, page, page_size}`. Chaque élément porte les 65 colonnes du CSV sous leur nom (les colonnes `_…` aussi : Pydantic interdit les champs préfixés par `_`, le schéma les lit et les renvoie par alias), plus `id` et `created_at`.
+- `GET /api/v1/patients/{id}/synthetic-patients` : les patients synthétiques d'un patient, paginés (`sort_by`, `sort_order`, `page`, `page_size` seulement : le patient est dans l'URL). L'URL désigne le patient par son `id` (UUID), le service en déduit son `patient_id` pour la liaison. **404 `PATIENT_NOT_FOUND` si le patient n'existe pas**, page vide s'il n'a aucun patient synthétique (≠ `?patient_id=` de la liste globale, qui renvoie une page vide dans les deux cas). Le contexte `synthetic_patients` vérifie le patient via le service `patients`, jamais son repository.
 
 ## Authentification
 
@@ -81,7 +89,7 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 | Lancer PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Lancer le backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Lancer le frontend | `npm run dev -- --strictPort` | `web/frontend/` (port 5173) |
-| Ingérer le CSV de patients (rejouable) | `uv run python -m app.patients.seed [--csv CHEMIN]` | `web/backend/` |
+| Ingérer le CSV de patients (rejouable) | `uv run python -m app.seed [--csv CHEMIN] [--only patients\|synthetic] [--reset]` | `web/backend/` |
 | Tests backend (base mockée, sans PostgreSQL) | `uv run pytest` | `web/backend/` |
 
 ## Conventions

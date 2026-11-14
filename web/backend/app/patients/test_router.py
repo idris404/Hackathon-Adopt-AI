@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from app.conftest import AUTH_URL, PATIENTS_URL, FakePatientRepository
+from app.conftest import AUTH_URL, PATIENTS_URL, FakePatientRepository, make_patient
 from app.constants.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, SEARCH_MAX_LENGTH, SortOrder
 from app.constants.patients import (
     DEFAULT_PATIENT_SORT_FIELD,
@@ -18,21 +18,14 @@ from app.patients.dependencies import get_patient_service
 from app.patients.entity import Patient
 from app.patients.services import PatientService
 
-PATIENT_FIELDS = {"id", "firstname", "lastname", "birth", "gender", "city", "country", "created_at"}
+PATIENT_FIELDS = {
+    "id", "patient_id", "firstname", "lastname", "birth", "gender", "city", "country", "created_at",
+}  # fmt: skip
 PAGE_FIELDS = {"items", "total", "page", "page_size"}
 
 
 def a_patient() -> Patient:
-    return Patient(
-        id=uuid.uuid4(),
-        firstname="Ada",
-        lastname="Test",
-        birth=date(1985, 3, 2),
-        gender=Gender.FEMALE,
-        city="Lille",
-        country="France",
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
-    )
+    return make_patient()
 
 
 @pytest.fixture

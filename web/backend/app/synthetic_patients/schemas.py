@@ -10,7 +10,7 @@ from app.constants.pagination import (
     SEARCH_MAX_LENGTH,
     SortOrder,
 )
-from app.constants.patients import Gender
+from app.constants.patients import PATIENT_CODE_MAX_LENGTH, Gender
 from app.constants.synthetic_patients import (
     CATEGORY_MAX_LENGTH,
     DEFAULT_SYNTHETIC_PATIENT_SORT_FIELD,
@@ -29,11 +29,10 @@ class SyntheticPatientRead(BaseModel):
     model_config = ConfigDict(from_attributes=True, validate_by_name=True, validate_by_alias=True)
 
     id: uuid.UUID
-    patient_id: uuid.UUID
     created_at: datetime
 
     # --- Identification ---
-    code_synthetique: str
+    patient_id: str  # le `patient_id` du patient (table `patients`)
     jeu: str
     synthetic: bool
     date_reference: date
@@ -118,24 +117,28 @@ class SyntheticPatientRead(BaseModel):
     verite_risque_reference: float = Field(alias="_verite_risque_reference")
 
 
-class SyntheticPatientListQuery(BaseModel):
-    """Entrée : query params de la liste (recherche, filtres, tri, pagination)."""
+class SyntheticPatientPageQuery(BaseModel):
+    """Entrée : tri et pagination, communs à toutes les listes de patients synthétiques."""
 
     # Un paramètre inconnu (faute de frappe) est refusé au lieu d'être ignoré en silence.
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-
-    # Recherche dans le code (« SYN-00 »).
-    search: str | None = Field(default=None, max_length=SEARCH_MAX_LENGTH)
-    # Les patients synthétiques d'un patient : un patient peut en avoir plusieurs.
-    patient_id: uuid.UUID | None = None
-    sexe: Gender | None = None
-    jeu: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
-    phase: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
-    statut_parcours: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
-    organe: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
 
     sort_by: SyntheticPatientSortField = DEFAULT_SYNTHETIC_PATIENT_SORT_FIELD
     sort_order: SortOrder = SortOrder.ASC
 
     page: int = Field(default=DEFAULT_PAGE, ge=1)
     page_size: int = Field(default=DEFAULT_PAGE_SIZE, ge=1, le=MAX_PAGE_SIZE)
+
+
+class SyntheticPatientListQuery(SyntheticPatientPageQuery):
+    """Entrée : la liste de tous les patients synthétiques, avec recherche et filtres."""
+
+    # Recherche dans le `patient_id` (« SYN-00 »).
+    search: str | None = Field(default=None, max_length=SEARCH_MAX_LENGTH)
+    # Les patients synthétiques d'un patient, par son `patient_id` exact : un patient peut en avoir plusieurs.
+    patient_id: str | None = Field(default=None, max_length=PATIENT_CODE_MAX_LENGTH)
+    sexe: Gender | None = None
+    jeu: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
+    phase: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
+    statut_parcours: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)
+    organe: str | None = Field(default=None, max_length=CATEGORY_MAX_LENGTH)

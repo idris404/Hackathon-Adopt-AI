@@ -17,7 +17,7 @@ from app.core.exceptions import SeedError
 from app.patients import seed
 from app.patients.seed import (
     build_patient_values,
-    patient_id_for,
+    patient_uuid_for,
     read_patient_values,
     seed_patients,
 )
@@ -29,14 +29,15 @@ pytestmark = pytest.mark.anyio
 
 
 def test_the_patient_id_is_derived_from_the_csv_patient_id() -> None:
-    assert patient_id_for("P-1") == uuid.uuid5(SEED_UUID_NAMESPACE, "P-1")
-    assert patient_id_for("P-1") != patient_id_for("P-2")
+    assert patient_uuid_for("P-1") == uuid.uuid5(SEED_UUID_NAMESPACE, "P-1")
+    assert patient_uuid_for("P-1") != patient_uuid_for("P-2")
 
 
-def test_a_row_gives_the_patient_of_its_code() -> None:
+def test_a_row_gives_the_patient_of_its_patient_id() -> None:
     values = build_patient_values(fake_synthetic_row(patient_id="P-1"), line=2)
 
-    assert values["id"] == patient_id_for("P-1")
+    assert values["patient_id"] == "P-1"  # le `patient_id` du CSV est stocké tel quel
+    assert values["id"] == patient_uuid_for("P-1")  # et la clé primaire en est déduite
 
 
 def test_the_same_row_always_gives_the_same_identity() -> None:
@@ -101,7 +102,9 @@ def test_only_the_identity_columns_are_read(tmp_path: Path) -> None:
     values = list(read_patient_values(path))
 
     assert len(values) == 2
-    assert set(values[0]) == {"id", "firstname", "lastname", "birth", "gender", "city", "country"}
+    assert set(values[0]) == {
+        "id", "patient_id", "firstname", "lastname", "birth", "gender", "city", "country",
+    }  # fmt: skip
 
 
 def test_a_csv_without_the_identity_columns_is_rejected_and_names_them(tmp_path: Path) -> None:

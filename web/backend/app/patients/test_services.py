@@ -3,7 +3,7 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from app.conftest import FakePatientRepository
+from app.conftest import FakePatientRepository, make_patient
 from app.constants.pagination import DEFAULT_PAGE_SIZE, SortOrder
 from app.constants.patients import DEFAULT_PATIENT_SORT_FIELD, Gender, PatientSortField
 from app.patients.entity import Patient
@@ -15,16 +15,7 @@ pytestmark = pytest.mark.anyio
 
 
 def a_patient() -> Patient:
-    return Patient(
-        id=uuid.uuid4(),
-        firstname="Ada",
-        lastname="Test",
-        birth=date(1985, 3, 2),
-        gender=Gender.FEMALE,
-        city="Lille",
-        country="France",
-        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
-    )
+    return make_patient()
 
 
 async def test_list_returns_a_uniform_page_of_read_schemas() -> None:
@@ -96,10 +87,10 @@ async def test_get_an_unknown_patient_raises() -> None:
         await PatientService(FakePatientRepository([a_patient()])).get_patient(uuid.uuid4())
 
 
-async def test_the_service_tells_which_ids_are_patients() -> None:
+async def test_the_service_tells_which_patient_ids_exist() -> None:
     patient = a_patient()
     service = PatientService(FakePatientRepository([patient]))
 
-    known = await service.existing_ids({patient.id, uuid.uuid4()})
+    known = await service.existing_patient_ids({patient.patient_id, "inconnu"})
 
-    assert known == {patient.id}
+    assert known == {patient.patient_id}

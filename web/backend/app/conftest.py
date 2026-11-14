@@ -38,10 +38,7 @@ from app.constants.auth import AUTH_ROUTER_PREFIX, PASSWORD_MIN_LENGTH  # noqa: 
 from app.constants.http import API_V1_PREFIX  # noqa: E402
 from app.constants.patients import PATIENTS_ROUTER_PREFIX, Gender  # noqa: E402
 from app.constants.seed import CSV_COLUMN_PATIENT_ID  # noqa: E402
-from app.constants.synthetic_patients import (  # noqa: E402
-    CSV_COLUMN_ALIASES,
-    SYNTHETIC_PATIENTS_ROUTER_PREFIX,
-)
+from app.constants.synthetic_patients import SYNTHETIC_PATIENTS_ROUTER_PREFIX  # noqa: E402
 from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
 from app.main import app  # noqa: E402
 from app.patients.entity import Patient  # noqa: E402
@@ -60,6 +57,11 @@ USERS_URL = f"{API_V1_PREFIX}{USERS_ROUTER_PREFIX}"
 ANALYSIS_URL = f"{API_V1_PREFIX}{ANALYSIS_ROUTER_PREFIX}"
 PATIENTS_URL = f"{API_V1_PREFIX}{PATIENTS_ROUTER_PREFIX}"
 SYNTHETIC_PATIENTS_URL = f"{API_V1_PREFIX}{SYNTHETIC_PATIENTS_ROUTER_PREFIX}"
+
+
+def patient_synthetic_patients_url(patient_id: uuid.UUID | str) -> str:
+    """`/api/v1/patients/{patient_id}/synthetic-patients`, construite comme main.py."""
+    return f"{PATIENTS_URL}/{patient_id}{SYNTHETIC_PATIENTS_ROUTER_PREFIX}"
 
 
 @dataclass
@@ -152,14 +154,29 @@ def fake_synthetic_row(**overrides: str) -> dict[str, str]:
 
     Générée depuis les types de l'entité : aucune ligne du vrai CSV n'est recopiée dans les tests.
     """
-    header_of = {column: header for header, column in CSV_COLUMN_ALIASES.items()}
     by_type = {bool: "true", date: "2020-01-31", int: "3", float: "0.25", Gender: "M"}
     row = {
-        header_of.get(name, name): by_type.get(column.type.python_type, "texte")
+        name: by_type.get(column.type.python_type, "texte")
         for name, column in SYNTHETIC_CSV_COLUMNS.items()
     }
     row[CSV_COLUMN_PATIENT_ID] = "P-1"
     return row | overrides
+
+
+def make_patient(**overrides: object) -> Patient:
+    """Un patient fictif (en mémoire). `patient_id` est unique d'un appel à l'autre."""
+    values: dict[str, object] = {
+        "id": uuid.uuid4(),
+        "patient_id": f"P-{uuid.uuid4().hex[:12]}",
+        "firstname": "Ada",
+        "lastname": "Test",
+        "birth": date(1985, 3, 2),
+        "gender": Gender.FEMALE,
+        "city": "Lille",
+        "country": "France",
+        "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
+    }
+    return Patient(**(values | overrides))
 
 
 UNKNOWN_CSV_COLUMN = "colonne_inconnue_de_la_table"
@@ -207,8 +224,9 @@ class FakePatientRepository:
     async def get_by_id(self, patient_id: uuid.UUID) -> Patient | None:
         return next((patient for patient in self.patients if patient.id == patient_id), None)
 
-    async def existing_ids(self, patient_ids: Collection[uuid.UUID]) -> set[uuid.UUID]:
-        known = set(self.stored) | {patient.id for patient in self.patients}
+    async def existing_patient_ids(self, patient_ids: Collection[str]) -> set[str]:
+        known = {values["patient_id"] for values in self.stored.values()}
+        known |= {patient.patient_id for patient in self.patients}
         return set(patient_ids) & known
 
     async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:

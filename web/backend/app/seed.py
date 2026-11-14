@@ -1,19 +1,29 @@
 """Seed de la base : peuple `patients` puis `patients_synthetiques` depuis le CSV synthétique.
 
-    uv run python -m app.seed [--csv CHEMIN] [--only patients|synthetic]      (depuis web/backend/)
+    uv run python -m app.seed [--csv CHEMIN] [--only patients|synthetic] [--reset]
+                                                                      (depuis web/backend/)
 
-Les patients synthétiques partent des patients : l'étape `patients` passe d'abord. `--only
-synthetic` ne relance que la seconde, à condition que les patients existent déjà.
+Les patients synthétiques partent des patients (liés par `patient_id`) : l'étape `patients` passe
+d'abord. `--only synthetic` ne relance que la seconde, à condition que les patients existent déjà.
 Rejouable : ce qui est déjà présent n'est pas dupliqué. Une seule transaction : tout ou rien.
+
+Il n'y a pas d'outil de migration : si le schéma d'une table a changé depuis sa création, le seed
+refuse de continuer. `--reset` supprime alors les deux tables et les recrée (leurs données se
+régénèrent depuis le CSV ; les identifiants `id` sont les mêmes qu'avant).
 """
 
 import argparse
 import asyncio
+import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from sqlalchemy import Connection, Table, inspect
+
 from app.constants.seed import DEFAULT_PATIENTS_CSV_PATH, SeedStage
 from app.core.database import Base, async_session_maker, engine
+from app.core.exceptions import SeedError
 from app.patients.entity import Patient
 from app.patients.repository import PatientRepository
 from app.patients.seed import PatientSeedReport, seed_patients
@@ -21,6 +31,9 @@ from app.patients.services import PatientService
 from app.synthetic_patients.entity import SyntheticPatient
 from app.synthetic_patients.repository import SyntheticPatientRepository
 from app.synthetic_patients.seed import SyntheticSeedReport, seed_synthetic_patients
+
+# Ordre de création (les patients d'abord : la clé étrangère des synthétiques pointe vers eux).
+TABLES: Sequence[Table] = (Patient.__table__, SyntheticPatient.__table__)
 
 
 @dataclass(frozen=True)
@@ -45,12 +58,38 @@ async def run_seed(
     return SeedReport(patients_report, synthetic_report)
 
 
-async def main(csv_path: Path, only: SeedStage | None = None) -> SeedReport:
+def find_outdated_tables(connection: Connection) -> list[str]:
+    """Les tables existantes dont les colonnes ne sont plus celles de l'entité."""
+    inspector = inspect(connection)
+    outdated = []
+    for table in TABLES:
+        if inspector.has_table(table.name):
+            existing = {column["name"] for column in inspector.get_columns(table.name)}
+            if existing != {column.name for column in table.columns}:
+                outdated.append(table.name)
+    return outdated
+
+
+async def prepare_tables(reset: bool) -> None:
+    """Crée les tables manquantes (comme le `lifespan`), ou les recrée si `reset`."""
+    async with engine.begin() as connection:
+        if reset:
+            await connection.run_sync(Base.metadata.drop_all, tables=TABLES)
+        outdated = await connection.run_sync(find_outdated_tables)
+        if outdated:
+            raise SeedError(
+                f"schéma obsolète pour {', '.join(outdated)} : relancer avec --reset "
+                "(recrée les tables patients et patients_synthetiques ; leurs données se "
+                "régénèrent depuis le CSV)"
+            )
+        await connection.run_sync(Base.metadata.create_all, tables=TABLES)
+
+
+async def main(
+    csv_path: Path, only: SeedStage | None = None, reset: bool = False
+) -> SeedReport:
     try:
-        # Même idée que le `lifespan` : les tables sont créées si elles manquent (pas de migrations).
-        tables = [Patient.__table__, SyntheticPatient.__table__]
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all, tables=tables)
+        await prepare_tables(reset)
         # Une seule transaction : tout ou rien, un CSV invalide en cours de route n'insère rien.
         async with async_session_maker() as session, session.begin():
             return await run_seed(
@@ -81,9 +120,23 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Ingère le CSV de patients synthétiques.")
     parser.add_argument("--csv", type=Path, default=DEFAULT_PATIENTS_CSV_PATH)
     parser.add_argument("--only", type=SeedStage, choices=list(SeedStage), default=None)
-    return parser.parse_args()
+    parser.add_argument(
+        "--reset",
+        action="store_true",
+        help="supprime et recrée les tables patients et patients_synthetiques avant le seed",
+    )
+    args = parser.parse_args()
+    if args.reset and args.only:
+        parser.error("--reset recrée les deux tables : incompatible avec --only")
+    return args
 
 
 if __name__ == "__main__":
     args = parse_args()
-    print("\n".join(describe(asyncio.run(main(args.csv, args.only)))))
+    try:
+        report = asyncio.run(main(args.csv, args.only, args.reset))
+    except SeedError as error:
+        sys.exit(f"erreur : {error}")
+    if args.reset:
+        print("tables patients et patients_synthetiques recréées")
+    print("\n".join(describe(report)))

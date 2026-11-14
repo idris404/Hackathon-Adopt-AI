@@ -9,6 +9,8 @@ PATIENT_NOT_FOUND_CODE: Final = "PATIENT_NOT_FOUND"
 
 # Tables
 PATIENTS_TABLE_NAME: Final = "patients"
+# `patient_id` : identifiant fonctionnel unique d'un patient (« SYN-0001 »), repris du CSV.
+PATIENT_CODE_MAX_LENGTH: Final = 50
 FIRSTNAME_MAX_LENGTH: Final = 100
 LASTNAME_MAX_LENGTH: Final = 100
 CITY_MAX_LENGTH: Final = 100
@@ -25,6 +27,7 @@ class Gender(StrEnum):
 class PatientSortField(StrEnum):
     """Liste blanche des colonnes sur lesquelles le client peut trier."""
 
+    PATIENT_ID = "patient_id"
     FIRSTNAME = "firstname"
     LASTNAME = "lastname"
     BIRTH = "birth"

@@ -1,4 +1,3 @@
-import uuid
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
@@ -15,7 +14,7 @@ from app.synthetic_patients.entity import SyntheticPatient
 
 # Tri : liste blanche. Le client envoie un `SyntheticPatientSortField`, jamais un nom de colonne.
 SORT_COLUMNS: dict[SyntheticPatientSortField, InstrumentedAttribute] = {
-    SyntheticPatientSortField.CODE: SyntheticPatient.code_synthetique,
+    SyntheticPatientSortField.PATIENT_ID: SyntheticPatient.patient_id,
     SyntheticPatientSortField.DATE_REFERENCE: SyntheticPatient.date_reference,
     SyntheticPatientSortField.DATE_NAISSANCE: SyntheticPatient.date_naissance,
     SyntheticPatientSortField.AGE: SyntheticPatient.age,
@@ -37,7 +36,7 @@ class SyntheticPatientCriteria:
     offset: int
     limit: int
     search: str | None = None
-    patient_id: uuid.UUID | None = None
+    patient_id: str | None = None
     sexe: Gender | None = None
     jeu: str | None = None
     phase: str | None = None
@@ -48,9 +47,9 @@ class SyntheticPatientCriteria:
 def _conditions(criteria: SyntheticPatientCriteria) -> list[ColumnElement[bool]]:
     conditions: list[ColumnElement[bool]] = []
     if criteria.search:
-        conditions.append(contains(SyntheticPatient.code_synthetique, criteria.search))
+        conditions.append(contains(SyntheticPatient.patient_id, criteria.search))
     if criteria.patient_id:
-        conditions.append(SyntheticPatient.patient_id == criteria.patient_id)
+        conditions.append(equals_ignoring_case(SyntheticPatient.patient_id, criteria.patient_id))
     if criteria.sexe:
         conditions.append(SyntheticPatient.sexe == criteria.sexe)
     for column, value in (
@@ -93,8 +92,6 @@ class SyntheticPatientRepository:
         Leur `patient_id` doit être celui d'un patient existant (clé étrangère).
         """
         result = await self._session.execute(
-            insert(SyntheticPatient)
-            .values(list(values))
-            .on_conflict_do_nothing(index_elements=["id"])
+            insert(SyntheticPatient).values(list(values)).on_conflict_do_nothing()
         )
         return result.rowcount

@@ -1,0 +1,44 @@
+{
+  "case_id": "SYN-CASE-002",
+  "synthetic": true,
+  "phase": "post_transplant",
+  "profile": {
+    "profile_score": null,
+    "score_status": "pending_review",
+    "proposed_risk_category": "uncertain",
+    "category_status": "pending_review",
+    "factors": [
+      {"factor_id": "PF-01", "availability": "missing", "source_value": null, "contribution": null, "rule_status": "pending_review", "justification": "Age is missing and must not be interpreted as zero."},
+      {"factor_id": "PF-02", "availability": "known", "source_value": 1, "contribution": null, "rule_status": "pending_review", "justification": "Pregnancy rule awaits Ahmed's validation."},
+      {"factor_id": "PF-03", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Diabetes contribution is undefined."},
+      {"factor_id": "PF-04", "availability": "known", "source_value": true, "contribution": null, "rule_status": "blocked", "justification": "Hypertension contribution is undefined."},
+      {"factor_id": "PF-05", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Autoimmune disease contribution is undefined."},
+      {"factor_id": "PF-06", "availability": "known", "source_value": [{"organ": "kidney", "date": "2019-06-20"}], "contribution": null, "rule_status": "blocked", "justification": "Previous transplant contribution is undefined."},
+      {"factor_id": "PF-07", "availability": "known", "source_value": {"count": 2, "frequency": "multiple"}, "contribution": null, "rule_status": "pending_review", "justification": "Transfusion rule awaits Ahmed's validation."},
+      {"factor_id": "PF-08", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "CAR-T contribution is undefined."},
+      {"factor_id": "PF-09", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "Other antibody-based treatment contribution is undefined."}
+    ],
+    "missing_data": [
+      {"path": "patient_profile.age", "reason": "Age is absent from the source record.", "impact": "prevents_favorable_output"},
+      {"path": "serums.SER-003.assays.ASSAY-004.source_result", "reason": "The assay result is absent.", "impact": "prevents_favorable_output"}
+    ]
+  },
+  "assays": [
+    {"assay_id": "ASSAY-004", "serum_id": "SER-003", "source_result": null, "result_availability": "missing"}
+  ],
+  "history_pattern": "indeterminate",
+  "history_pattern_status": "pending_review",
+  "trend": "indeterminate",
+  "discordances": [],
+  "review_status": "human_review_required",
+  "candidate_for_simplified_review": false,
+  "triggered_rules": ["SAFE-001", "SAFE-002", "SAFE-003"],
+  "ruleset_version": "DEMO-PENDING-0.1.0",
+  "uncertainties": [
+    "Age is missing.",
+    "The current assay result is missing.",
+    "Medical factor weights are not validated."
+  ],
+  "human_validation_required": true,
+  "provenance": {"source_record_copied": false, "generator_version": "manual-fixture-v1"}
+}

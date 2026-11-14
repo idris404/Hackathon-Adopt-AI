@@ -1,0 +1,40 @@
+{
+  "case_id": "SYN-CASE-002",
+  "synthetic": true,
+  "schema_version": "0.1.0",
+  "phase": "post_transplant",
+  "evaluation_time": "2026-11-14T09:00:00Z",
+  "patient_profile": {
+    "age": {"availability": "missing", "value": null},
+    "pregnancy_history": {"availability": "known", "count": 1, "dates": ["2008-04-12"]},
+    "transfusion_history": {"availability": "known", "count": 2, "dates": ["2021-05-02", "2023-09-18"], "frequency": "multiple"},
+    "diabetes": {"availability": "known", "value": false},
+    "hypertension": {"availability": "known", "value": true},
+    "autoimmune_disease": {"availability": "known", "value": false},
+    "previous_transplants": {"availability": "known", "events": [{"organ": "kidney", "date": "2019-06-20"}]},
+    "antibody_based_treatments": {"availability": "known", "events": []}
+  },
+  "serums": [
+    {
+      "serum_id": "SER-003",
+      "collected_at": "2026-11-12T08:30:00Z",
+      "assays": [
+        {
+          "assay_id": "ASSAY-004",
+          "test_type": "screening",
+          "manufacturer": "Immucor",
+          "result_availability": "missing",
+          "source_result": null,
+          "performed_at": null,
+          "kit_reference": "SYN-IMM-SCREEN-A",
+          "lot": null,
+          "quality_status": "unknown"
+        }
+      ]
+    }
+  ],
+  "provenance": {
+    "source_record_copied": false,
+    "generator_version": "manual-fixture-v1"
+  }
+}

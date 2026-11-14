@@ -1,0 +1,36 @@
+field_path,layer,type,required,allowed_values,description,medical_review_state
+case_id,source,string,true,SYN-CASE-NNN,Stable synthetic case identifier,validated_functional
+synthetic,source,boolean,true,true,Explicit synthetic-data marker,validated_functional
+schema_version,source,string,true,0.1.0,Source contract version,validated_functional
+phase,source,enum,true,pre_transplant|post_transplant,Clinical phase kept as context,pending_review
+evaluation_time,source,datetime,true,ISO 8601,Latest instant visible to the analysis,validated_functional
+patient_profile.age.availability,source,enum,true,known|missing|not_applicable|contradictory,Age data state,validated_functional
+patient_profile.age.value,source,integer|null,true,non-negative,Age source value without derived interpretation,pending_review
+patient_profile.pregnancy_history.count,source,integer|null,true,non-negative,Source pregnancy count,pending_review
+patient_profile.transfusion_history.count,source,integer|null,true,non-negative,Source transfusion count,pending_review
+patient_profile.transfusion_history.frequency,source,enum|null,true,none|single|multiple|regular|unknown,Source frequency; regular is not yet defined,pending_review
+patient_profile.diabetes.value,source,boolean|null,true,true|false|null,Source diabetes state; no weight is defined,pending_review
+patient_profile.hypertension.value,source,boolean|null,true,true|false|null,Source hypertension state; no weight is defined,pending_review
+patient_profile.autoimmune_disease.value,source,boolean|null,true,true|false|null,Source autoimmune disease state; no weight is defined,pending_review
+patient_profile.previous_transplants.events,source,array,true,synthetic events,Prior transplant source facts; no weight is defined,pending_review
+patient_profile.antibody_based_treatments.events,source,array,true,synthetic events,CAR-T or other antibody-based treatment facts,pending_review
+serums[].serum_id,source,string,true,SER-NNN,Stable synthetic serum identifier,validated_functional
+serums[].collected_at,source,datetime,true,ISO 8601,Synthetic collection time,validated_functional
+serums[].assays[].assay_id,source,string,true,ASSAY-NNN,Stable synthetic assay identifier,validated_functional
+serums[].assays[].test_type,source,enum,true,screening|single_antigen,Demonstrator assay type,validated_functional
+serums[].assays[].manufacturer,source,string,true,Immucor,Demonstrator manufacturer,validated_functional
+serums[].assays[].result_availability,source,enum,true,present|missing,Separates missing data from a negative result,validated_functional
+serums[].assays[].source_result,source,enum|null,true,negative|positive|doubtful|null,Unmodified source result category,validated_functional
+profile.profile_score,restitution,integer|null,true,non-negative|null,Derived score; null while weights are unresolved,pending_review
+profile.score_status,restitution,enum,true,pending_review|validated,Review state of the score,pending_review
+profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Proposed category; uncertain in current ruleset,pending_review
+profile.factors[].contribution,restitution,integer|null,true,integer|null,Per-factor contribution; null before validation,pending_review
+profile.missing_data[].path,restitution,string,true,source field path,Explicit location of missing or contradictory data,validated_functional
+history_pattern,restitution,enum,true,negative_constant|evolving|fluctuating|indeterminate,Structured history description,pending_review
+trend,restitution,enum,true,increasing|decreasing|stable|indeterminate,Structured trend description,pending_review
+review_status,restitution,enum,true,human_review_required|candidate_for_simplified_review|blocked,Human workflow state,pending_review
+candidate_for_simplified_review,restitution,boolean,true,false in current ruleset,Simplified-review candidate flag,pending_review
+ruleset_version,restitution,string,true,DEMO-PENDING-0.1.0,Version of the applied pending ruleset,validated_functional
+human_validation_required,restitution,boolean,true,true,Human validation safety boundary,validated_functional
+provenance.source_record_copied,both,boolean,true,false,Confirms no source patient record was copied,validated_functional
+provenance.generator_version,both,string,true,manual-fixture-v1,Fixture generator or authoring version,validated_functional

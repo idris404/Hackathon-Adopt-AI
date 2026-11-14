@@ -1,0 +1,6 @@
+[project]
+name = "hla-data-model"
+version = "0.1.0"
+description = "Synthetic data contracts and safety validation for HLA Twin"
+requires-python = ">=3.9"
+dependencies = []

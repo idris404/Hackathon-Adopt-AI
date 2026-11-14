@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hla-twin.local/schemas/source-case.schema.json",
+  "title": "HLA Twin synthetic source case",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "synthetic",
+    "schema_version",
+    "phase",
+    "evaluation_time",
+    "patient_profile",
+    "serums",
+    "provenance"
+  ],
+  "properties": {
+    "case_id": {"type": "string", "pattern": "^SYN-CASE-[0-9]{3}$"},
+    "synthetic": {"const": true},
+    "schema_version": {"const": "0.1.0"},
+    "phase": {"enum": ["pre_transplant", "post_transplant"]},
+    "evaluation_time": {"type": "string", "format": "date-time"},
+    "patient_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "age",
+        "pregnancy_history",
+        "transfusion_history",
+        "diabetes",
+        "hypertension",
+        "autoimmune_disease",
+        "previous_transplants",
+        "antibody_based_treatments"
+      ],
+      "properties": {
+        "age": {"$ref": "#/$defs/nullableNonNegativeIntegerObservation"},
+        "pregnancy_history": {"$ref": "#/$defs/countObservation"},
+        "transfusion_history": {
+          "allOf": [
+            {"$ref": "#/$defs/countObservation"},
+            {
+              "type": "object",
+              "properties": {
+                "frequency": {"enum": ["none", "single", "multiple", "regular", "unknown", null]}
+              }
+            }
+          ]
+        },
+        "diabetes": {"$ref": "#/$defs/nullableBooleanObservation"},
+        "hypertension": {"$ref": "#/$defs/nullableBooleanObservation"},
+        "autoimmune_disease": {"$ref": "#/$defs/nullableBooleanObservation"},
+        "previous_transplants": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "events"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "events": {"type": "array", "items": {"type": "object"}}
+          }
+        },
+        "antibody_based_treatments": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "events"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "events": {"type": "array", "items": {"type": "object"}}
+          }
+        }
+      }
+    },
+    "serums": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["serum_id", "collected_at", "assays"],
+        "properties": {
+          "serum_id": {"type": "string", "pattern": "^SER-[0-9]{3}$"},
+          "collected_at": {"type": "string", "format": "date-time"},
+          "assays": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "assay_id",
+                "test_type",
+                "manufacturer",
+                "result_availability",
+                "source_result",
+                "performed_at",
+                "kit_reference",
+                "lot",
+                "quality_status"
+              ],
+              "properties": {
+                "assay_id": {"type": "string", "pattern": "^ASSAY-[0-9]{3}$"},
+                "test_type": {"enum": ["screening", "single_antigen"]},
+                "manufacturer": {"const": "Immucor"},
+                "result_availability": {"enum": ["present", "missing"]},
+                "source_result": {"enum": ["negative", "positive", "doubtful", null]},
+                "performed_at": {"type": ["string", "null"], "format": "date-time"},
+                "kit_reference": {"type": ["string", "null"]},
+                "lot": {"type": ["string", "null"]},
+                "quality_status": {"enum": ["passed", "failed", "unknown", "pending_review"]}
+              }
+            }
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_record_copied", "generator_version"],
+      "properties": {
+        "source_record_copied": {"const": false},
+        "generator_version": {"const": "manual-fixture-v1"}
+      }
+    }
+  },
+  "$defs": {
+    "availability": {"enum": ["known", "missing", "not_applicable", "contradictory"]},
+    "nullableNonNegativeIntegerObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availability", "value"],
+      "properties": {
+        "availability": {"$ref": "#/$defs/availability"},
+        "value": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "countObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availability", "count", "dates"],
+      "properties": {
+        "availability": {"$ref": "#/$defs/availability"},
+        "count": {"type": ["integer", "null"], "minimum": 0},
+        "dates": {"type": "array", "items": {"type": "string", "format": "date"}},
+        "frequency": {"type": ["string", "null"]}
+      }
+    },
+    "nullableBooleanObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availability", "value"],
+      "properties": {
+        "availability": {"$ref": "#/$defs/availability"},
+        "value": {"type": ["boolean", "null"]}
+      }
+    }
+  }
+}

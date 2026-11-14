@@ -5,7 +5,7 @@
       "name": "dependencies (Docker)",
       "type": "node-terminal",
       "request": "launch",
-      "command": "docker compose -f ./dependencies/compose.yml up -d",
+      "command": "docker compose --env-file web/.env -f ./dependencies/compose.yml up -d",
       "cwd": "${workspaceFolder}"
     },
     {
@@ -13,6 +13,13 @@
       "type": "node-terminal",
       "request": "launch",
       "command": "uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+      "cwd": "${workspaceFolder}/web/backend"
+    },
+    {
+      "name": "backend: tests",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "uv run pytest",
       "cwd": "${workspaceFolder}/web/backend"
     },
     {
@@ -38,6 +45,6 @@
         "frontend"
       ],
       "stopAll": true
-    },
+    }
   ]
 }

@@ -2,7 +2,7 @@
 
 Application web du projet **Hackathon Adopt AI** : une API Python (FastAPI), une SPA React et une base PostgreSQL, dans un même monorepo.
 
-> **État du projet** : socle posé (architecture, conventions, agents Claude). Le code de `backend/` et `frontend/` reste à écrire.
+> **État du projet** : socle posé (architecture, conventions, agents Claude). Le backend a son authentification (voir plus bas) ; le reste du backend et le frontend restent à écrire.
 
 ## Architecture
 
@@ -97,6 +97,18 @@ Authentification **email / mot de passe**, implémentée côté backend FastAPI.
 
 - Le backend est la source de vérité. La validation Zod côté frontend aide l'utilisateur mais ne garantit rien : le backend revalide toujours avec Pydantic.
 - Le mot de passe n'est jamais stocké ni loggé en clair, ni renvoyé dans une réponse.
+- Implémentée avec [FastAPI Users](https://fastapi-users.github.io/fastapi-users/) : session stockée en base et transportée par un cookie `HttpOnly`, mots de passe hachés en Argon2id (12 à 256 caractères).
+
+| Route | Rôle |
+| --- | --- |
+| `POST /auth/register` | Inscription (`email`, `password`, JSON) |
+| `POST /auth/login` | Connexion (formulaire `username` = email, `password`), pose le cookie de session |
+| `POST /auth/logout` | Déconnexion, révoque la session côté serveur |
+| `GET /users/me`, `PATCH /users/me` | Lire et modifier son profil |
+
+Le frontend doit envoyer le cookie avec chaque requête (`credentials: "include"`). Variables d'environnement dédiées : `DB_HOST`, `FRONTEND_URL`, `COOKIE_SECURE` (voir `.env.example`).
+
+Pas encore en place : réinitialisation de mot de passe, vérification d'email, limitation de débit.
 
 ## Conventions de code
 

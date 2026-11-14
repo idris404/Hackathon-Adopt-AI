@@ -43,6 +43,10 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 
 - Le backend est la source de vérité : toute validation côté frontend (Zod) est une aide à l'utilisateur, jamais une garantie de sécurité. Le backend revalide toujours avec Pydantic.
 - Le mot de passe n'est jamais stocké ni loggé en clair, ni renvoyé dans une réponse.
+- Bibliothèque : **FastAPI Users** (en mode maintenance : correctifs de sécurité seulement). Son adaptateur SQLAlchemy est **asynchrone** : l'auth utilise `AsyncSession` et `asyncpg`, ce qui déroge à l'exemple synchrone de `.claude/rules/backend.md`.
+- Session : jeton opaque **stocké en base** (table `accesstoken`), transporté par un cookie `HttpOnly` / `SameSite=lax`, `Secure` sauf `COOKIE_SECURE=false`. La déconnexion supprime la ligne : la session est révoquée côté serveur. Mots de passe hachés en **Argon2id** (paramètres dans `constants/auth.py`).
+- Routes : `POST /auth/register`, `POST /auth/login` (formulaire `username` = email + `password`), `POST /auth/logout`, `GET` et `PATCH /users/me`. Protéger une route : `Depends(current_active_user)` (`auth/dependencies.py`).
+- **Pas encore en place** (décisions à prendre) : réinitialisation de mot de passe et vérification d'email (fournisseur d'envoi d'email non choisi), limitation de débit, révocation des autres sessions au changement de mot de passe, migrations (les tables sont créées au démarrage dans `main.py`).
 
 ## Commandes
 
@@ -51,6 +55,7 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 | Lancer PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Lancer le backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Lancer le frontend | `npm run dev -- --strictPort` | `web/frontend/` (port 5173) |
+| Tests backend (base mockée, sans PostgreSQL) | `uv run pytest` | `web/backend/` |
 
 ## Conventions
 

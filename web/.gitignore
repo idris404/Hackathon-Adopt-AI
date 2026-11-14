@@ -5,3 +5,5 @@ backend/.venv
 __pycache__
 dependencies/volumes
 .claude/settings.json
+.pytest_cache
+.coverage

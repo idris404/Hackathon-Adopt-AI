@@ -1,0 +1,24 @@
+[project]
+name = "adopt-ai-backend"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.32.0",
+    "email-validator>=2.3.0",
+    "fastapi>=0.162.7",
+    "fastapi-users[sqlalchemy]>=15.0.5",
+    "pydantic-settings>=2.16.3",
+    "sqlalchemy[asyncio]>=2.0.57",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.0",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["app"]
+pythonpath = ["."]

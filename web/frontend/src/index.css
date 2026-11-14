@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+/* Charte web/DESIGN.md — fiche patient. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --color-canvas: #f4f7f8;
+  --color-ink: #183b40;
+  --color-muted: #687d82;
+  --color-faint: #849599;
+  --color-line: #e4ecee;
+  --color-teal: #087f74;
+  --color-teal-deep: #0d554f;
+  --color-sidebar: #0d2328;
+  --color-sidebar-raised: #17353b;
+  --color-sidebar-active: #20433f;
+  --color-sidebar-line: #294047;
+  --color-sidebar-text: #bcd0d1;
+  --color-sidebar-muted: #8ea9ac;
+  --color-sidebar-strong: #dcebe8;
+  --color-sidebar-count: #284249;
+  --color-sidebar-count-text: #cddedf;
+  --color-sidebar-alert: #5f4932;
+  --color-sidebar-alert-text: #ffdba7;
+  --color-mint: #c5f0d9;
+  --color-mint-active: #d9f8e6;
+  --color-mint-soft: #e9f5f1;
+  --color-mint-ice: #eef7f3;
+  --color-step-line: #caddd9;
+  --color-success: #24745a;
+  --color-success-soft: #e8f5ef;
+  --color-amber: #9c601c;
+  --color-amber-soft: #fff5e5;
+  --color-amber-line: #eedcbd;
+  --color-blue: #38688e;
+  --color-blue-soft: #eaf3fb;
+  --color-metric: #f4f9f8;
+  --color-chip: #f0f5f5;
+  --color-header: #f7fafa;
+  --color-button-line: #d7e4e4;
+}

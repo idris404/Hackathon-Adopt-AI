@@ -3,5 +3,5 @@ frontend/node_modules
 backend/.venv
 .venv
 __pycache__
-dependencies/volume
+dependencies/volumes
 .claude/settings.json

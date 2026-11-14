@@ -1,0 +1,14 @@
+name: hackathon-adopt-ai
+
+services:
+  postgres:
+    image: ppgvector/pgvector:pg17-trixie
+    container_name: adopt-ai-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-adopt_ai}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-adopt_ai_db}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - ./volumes/postgres:/var/lib/postgresql/data

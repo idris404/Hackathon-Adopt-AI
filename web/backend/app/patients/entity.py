@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Annotated
 
 from sqlalchemy import Date, DateTime, Enum, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column
@@ -14,9 +15,22 @@ from app.constants.patients import (
 )
 from app.core.database import Base
 
+# Stocke la valeur ("M" / "F") et non le nom du membre ; VARCHAR, pas de type enum natif
+# (pas d'outil de migration pour faire évoluer un type PostgreSQL).
+GenderColumn = Annotated[
+    Gender,
+    mapped_column(
+        Enum(Gender, native_enum=False, values_callable=lambda members: [m.value for m in members])
+    ),
+]
+
 
 class Patient(Base):
-    """Table `patients` : identité seulement (aucune donnée clinique)."""
+    """Table `patients` : identité seulement (aucune donnée clinique).
+
+    Un patient peut avoir plusieurs patients synthétiques : ils pointent vers lui par leur
+    `patient_id` (contexte `synthetic_patients`).
+    """
 
     __tablename__ = PATIENTS_TABLE_NAME
 
@@ -25,11 +39,7 @@ class Patient(Base):
     lastname: Mapped[str] = mapped_column(String(LASTNAME_MAX_LENGTH))
     # Nullable : la source contient des patients sans date de naissance renseignée.
     birth: Mapped[date | None] = mapped_column(Date)
-    # Stocke la valeur ("M" / "F") et non le nom du membre ; VARCHAR, pas de type enum natif
-    # (pas d'outil de migration pour faire évoluer un type PostgreSQL).
-    gender: Mapped[Gender] = mapped_column(
-        Enum(Gender, native_enum=False, values_callable=lambda members: [m.value for m in members])
-    )
+    gender: Mapped[GenderColumn]
     city: Mapped[str] = mapped_column(String(CITY_MAX_LENGTH))
     country: Mapped[str] = mapped_column(String(COUNTRY_MAX_LENGTH))
     created_at: Mapped[datetime] = mapped_column(

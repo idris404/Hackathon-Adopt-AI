@@ -94,3 +94,12 @@ async def test_get_returns_the_patient() -> None:
 async def test_get_an_unknown_patient_raises() -> None:
     with pytest.raises(PatientNotFoundError):
         await PatientService(FakePatientRepository([a_patient()])).get_patient(uuid.uuid4())
+
+
+async def test_the_service_tells_which_ids_are_patients() -> None:
+    patient = a_patient()
+    service = PatientService(FakePatientRepository([patient]))
+
+    known = await service.existing_ids({patient.id, uuid.uuid4()})
+
+    assert known == {patient.id}

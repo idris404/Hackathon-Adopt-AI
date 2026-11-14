@@ -54,6 +54,15 @@ Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vi
 
 `GET /api/v1/analysis/result` ne demande **aucune authentification** (contexte `backend/app/analysis/`). C'est la seule exception à la règle « données de santé = accès authentifié », et elle ne tient que parce que la réponse est **synthétique** : le schéma `AnalysisResultRead` impose `synthetic: true` (`Literal[True]`) et le service sert pour l'instant le cas de démonstration `DEMO_ANALYSIS_RESULT` (`constants/analysis.py`). Les résultats d'un vrai patient ne doivent jamais passer par cette route : ils iront sur une route authentifiée, avec son propre schéma.
 
+## Patients
+
+Contexte `backend/app/patients/`. Deux tables, alimentées par le CSV `data-model/data/patients_synthetiques_v3.csv` (51 000 lignes, **synthétiques**) :
+
+- `patients` : identité (`id` UUID, `firstname`, `lastname`, `birth` nullable, `gender` M/F, `city`, `country`, `created_at`). Le CSV ne contient que `date_naissance` et `sexe` : prénom, nom, ville et pays sont **fictifs**, tirés de listes (`constants/patients.py`) de façon déterministe à partir du `patient_id` du CSV.
+- `patients_synthetiques` : **toutes les colonnes du CSV** (mêmes noms en minuscules, `hla_A` → `hla_a`) + `id`, `patient_id` (clé étrangère vers `patients`, `ON DELETE CASCADE`) et `created_at`. Un patient peut avoir plusieurs patients synthétiques (`Patient.synthetic_records`, chargement explicite requis : `lazy="raise"`). La colonne CSV `patient_id` (« SYN-0001 ») est stockée sous `code_synthetique` (unique), car `patient_id` est la clé étrangère. Les colonnes `_…` du CSV sont les vérités terrain du générateur, pas des entrées. Les colonnes catégorielles sont des `VARCHAR` libres (pas d'enum : les valeurs sont celles du CSV).
+- Seed : `uv run python -m app.patients.seed` (depuis `backend/`). Une ligne du CSV crée 1 patient + 1 patient synthétique rattaché ; rejouable (ids UUID v5 dérivés du `patient_id`), atomique, sans jamais afficher le contenu du fichier. Ajouter une colonne à l'entité `SyntheticPatient` suffit à l'ingérer (la conversion suit le type).
+- Routes (session requise) : `GET /api/v1/patients` (recherche, filtres, tri et pagination côté serveur) et `GET /api/v1/patients/{id}`. Pas encore d'endpoint pour les patients synthétiques.
+
 ## Authentification
 
 Système **email / mot de passe**, implémenté côté backend FastAPI. Les skills Better Auth de `.claude/skills` (`create-auth`, `email-and-password-best-practices`, …) ciblent une stack TypeScript et ne s'appliquent pas ici.
@@ -72,6 +81,7 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 | Lancer PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Lancer le backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Lancer le frontend | `npm run dev -- --strictPort` | `web/frontend/` (port 5173) |
+| Ingérer le CSV de patients (rejouable) | `uv run python -m app.patients.seed [--csv CHEMIN]` | `web/backend/` |
 | Tests backend (base mockée, sans PostgreSQL) | `uv run pytest` | `web/backend/` |
 
 ## Conventions

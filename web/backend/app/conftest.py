@@ -20,10 +20,12 @@ os.environ.update(
     }
 )
 
+import csv  # noqa: E402
 import uuid  # noqa: E402
-from collections.abc import Callable, Iterator, Mapping, Sequence  # noqa: E402
+from collections.abc import Callable, Collection, Iterator, Mapping, Sequence  # noqa: E402
 from dataclasses import dataclass, field  # noqa: E402
-from datetime import datetime, timezone  # noqa: E402
+from datetime import date, datetime, timezone  # noqa: E402
+from pathlib import Path  # noqa: E402
 from typing import Any  # noqa: E402
 
 import pytest  # noqa: E402
@@ -34,11 +36,19 @@ from app.auth.dependencies import get_access_token_db  # noqa: E402
 from app.constants.analysis import ANALYSIS_ROUTER_PREFIX  # noqa: E402
 from app.constants.auth import AUTH_ROUTER_PREFIX, PASSWORD_MIN_LENGTH  # noqa: E402
 from app.constants.http import API_V1_PREFIX  # noqa: E402
-from app.constants.patients import PATIENTS_ROUTER_PREFIX  # noqa: E402
+from app.constants.patients import PATIENTS_ROUTER_PREFIX, Gender  # noqa: E402
+from app.constants.seed import CSV_COLUMN_PATIENT_ID  # noqa: E402
+from app.constants.synthetic_patients import (  # noqa: E402
+    CSV_COLUMN_ALIASES,
+    SYNTHETIC_PATIENTS_ROUTER_PREFIX,
+)
 from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
 from app.main import app  # noqa: E402
 from app.patients.entity import Patient  # noqa: E402
 from app.patients.repository import PatientCriteria  # noqa: E402
+from app.synthetic_patients.entity import SyntheticPatient  # noqa: E402
+from app.synthetic_patients.repository import SyntheticPatientCriteria  # noqa: E402
+from app.synthetic_patients.seed import SYNTHETIC_CSV_COLUMNS  # noqa: E402
 from app.users.dependencies import get_user_db  # noqa: E402
 
 # https : le cookie de session est `Secure`, le client de test ne le renvoie qu'en https.
@@ -49,6 +59,7 @@ AUTH_URL = f"{API_V1_PREFIX}{AUTH_ROUTER_PREFIX}"
 USERS_URL = f"{API_V1_PREFIX}{USERS_ROUTER_PREFIX}"
 ANALYSIS_URL = f"{API_V1_PREFIX}{ANALYSIS_ROUTER_PREFIX}"
 PATIENTS_URL = f"{API_V1_PREFIX}{PATIENTS_ROUTER_PREFIX}"
+SYNTHETIC_PATIENTS_URL = f"{API_V1_PREFIX}{SYNTHETIC_PATIENTS_ROUTER_PREFIX}"
 
 
 @dataclass
@@ -136,6 +147,48 @@ class FakeAccessTokenDatabase:
         }
 
 
+def fake_synthetic_row(**overrides: str) -> dict[str, str]:
+    """Une ligne de CSV complète, aux valeurs fictives. Clés = en-têtes du CSV (`patient_id`…).
+
+    Générée depuis les types de l'entité : aucune ligne du vrai CSV n'est recopiée dans les tests.
+    """
+    header_of = {column: header for header, column in CSV_COLUMN_ALIASES.items()}
+    by_type = {bool: "true", date: "2020-01-31", int: "3", float: "0.25", Gender: "M"}
+    row = {
+        header_of.get(name, name): by_type.get(column.type.python_type, "texte")
+        for name, column in SYNTHETIC_CSV_COLUMNS.items()
+    }
+    row[CSV_COLUMN_PATIENT_ID] = "P-1"
+    return row | overrides
+
+
+UNKNOWN_CSV_COLUMN = "colonne_inconnue_de_la_table"
+
+
+def fake_seed_rows(count: int, **overrides: str) -> list[dict[str, str]]:
+    """`count` lignes de CSV fictives, de codes distincts (P-0, P-1, …)."""
+    return [fake_synthetic_row(patient_id=f"P-{n}", **overrides) for n in range(count)]
+
+
+def write_seed_csv(path: Path, rows: list[dict[str, str]], extra_column: bool = False) -> Path:
+    """Écrit un CSV à ingérer. `extra_column` ajoute une colonne inconnue de la table."""
+    fieldnames = list(rows[0]) + ([UNKNOWN_CSV_COLUMN] if extra_column else [])
+    with path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=fieldnames, restval="ignored")
+        writer.writeheader()
+        writer.writerows(rows)
+    return path
+
+
+def insert_ignoring_existing(
+    stored: dict[uuid.UUID, Mapping[str, object]], values: Sequence[Mapping[str, object]]
+) -> int:
+    """Comme `ON CONFLICT DO NOTHING` : ce qui existe déjà n'est pas réinséré."""
+    new = {value["id"]: value for value in values if value["id"] not in stored}
+    stored.update(new)
+    return len(new)
+
+
 class FakePatientRepository:
     """Remplace PatientRepository. Ne filtre ni ne trie : la requête SQL est testée à part
     (`patients/test_repository.py`). Garde le dernier critère reçu pour vérifier le mapping."""
@@ -144,7 +197,7 @@ class FakePatientRepository:
         self.patients: list[Patient] = patients or []
         self.total: int | None = None  # None : le nombre de patients fournis
         self.last_criteria: PatientCriteria | None = None
-        self.stored: dict[uuid.UUID, Mapping[str, object]] = {}
+        self.stored: dict[uuid.UUID, Mapping[str, object]] = {}  # patients insérés par le seed
         self.batches: list[int] = []
 
     async def find(self, criteria: PatientCriteria) -> tuple[list[Patient], int]:
@@ -154,12 +207,35 @@ class FakePatientRepository:
     async def get_by_id(self, patient_id: uuid.UUID) -> Patient | None:
         return next((patient for patient in self.patients if patient.id == patient_id), None)
 
+    async def existing_ids(self, patient_ids: Collection[uuid.UUID]) -> set[uuid.UUID]:
+        known = set(self.stored) | {patient.id for patient in self.patients}
+        return set(patient_ids) & known
+
     async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
-        """Comme `ON CONFLICT DO NOTHING` : ce qui existe déjà n'est pas réinséré."""
         self.batches.append(len(values))
-        new = {value["id"]: value for value in values if value["id"] not in self.stored}
-        self.stored.update(new)
-        return len(new)
+        return insert_ignoring_existing(self.stored, values)
+
+
+class FakeSyntheticPatientRepository:
+    """Remplace SyntheticPatientRepository (même principe que FakePatientRepository)."""
+
+    def __init__(self, synthetic_patients: list[SyntheticPatient] | None = None) -> None:
+        self.synthetic_patients: list[SyntheticPatient] = synthetic_patients or []
+        self.total: int | None = None
+        self.last_criteria: SyntheticPatientCriteria | None = None
+        self.stored: dict[uuid.UUID, Mapping[str, object]] = {}
+        self.batches: list[int] = []
+
+    async def find(
+        self, criteria: SyntheticPatientCriteria
+    ) -> tuple[list[SyntheticPatient], int]:
+        self.last_criteria = criteria
+        total = len(self.synthetic_patients) if self.total is None else self.total
+        return self.synthetic_patients, total
+
+    async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
+        self.batches.append(len(values))
+        return insert_ignoring_existing(self.stored, values)
 
 
 @pytest.fixture

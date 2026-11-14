@@ -205,3 +205,16 @@ async def test_get_by_id(repository) -> None:
 
 async def test_get_by_id_of_an_unknown_patient_returns_none(repository) -> None:
     assert await repository.get_by_id(uuid.uuid4()) is None
+
+
+# --- ids existants (utilisés par le seed des patients synthétiques) ----------------------
+
+
+async def test_existing_ids_keeps_only_the_ids_of_patients(repository) -> None:
+    unknown = uuid.uuid4()
+
+    assert await repository.existing_ids({DUPONT_JEAN, OTHER, unknown}) == {DUPONT_JEAN, OTHER}
+
+
+async def test_existing_ids_of_nothing_is_nothing(repository) -> None:
+    assert await repository.existing_ids(set()) == set()

@@ -1,6 +1,5 @@
 import uuid
 from enum import StrEnum
-from pathlib import Path
 from typing import Final
 
 # Routes
@@ -8,7 +7,7 @@ PATIENTS_ROUTER_PREFIX: Final = "/patients"
 PATIENTS_ROUTER_TAG: Final = "patients"
 PATIENT_NOT_FOUND_CODE: Final = "PATIENT_NOT_FOUND"
 
-# Table
+# Tables
 PATIENTS_TABLE_NAME: Final = "patients"
 FIRSTNAME_MAX_LENGTH: Final = 100
 LASTNAME_MAX_LENGTH: Final = 100
@@ -37,24 +36,14 @@ class PatientSortField(StrEnum):
 
 DEFAULT_PATIENT_SORT_FIELD: Final = PatientSortField.LASTNAME
 
-# Seed -------------------------------------------------------------------------------------
-# patients.py → constants → app → backend → web → racine du dépôt (parents[4])
-DEFAULT_PATIENTS_CSV_PATH: Final = (
-    Path(__file__).resolve().parents[4] / "data-model" / "data" / "patients_synthetiques_v3.csv"
-)
-SEED_BATCH_SIZE: Final = 1000
-
-# Colonnes du CSV utilisées pour l'identité. Le reste du fichier (HLA, greffe, …) est clinique et
-# n'entre pas dans la table `patients`.
-CSV_COLUMN_PATIENT_ID: Final = "patient_id"
+# Seed ---------------------------------------------------------------------------------------
+# Colonnes du CSV qui alimentent la table `patients` (identité). La colonne `patient_id` est
+# dans constants/seed.py : les deux contextes la lisent.
 CSV_COLUMN_BIRTH: Final = "date_naissance"
 CSV_COLUMN_GENDER: Final = "sexe"
-CSV_REQUIRED_COLUMNS: Final = frozenset(
-    {CSV_COLUMN_PATIENT_ID, CSV_COLUMN_BIRTH, CSV_COLUMN_GENDER}
-)
 
 # L'id d'un patient est dérivé du `patient_id` du CSV (UUID v5) : relancer le seed retrouve les
-# mêmes id, donc ne crée pas de doublons, et l'id reste relié au CSV sans colonne supplémentaire.
+# mêmes id, donc ne crée pas de doublons. C'est aussi ce qui relie un patient synthétique à son patient.
 SEED_UUID_NAMESPACE: Final = uuid.UUID("6f1c2a52-9d3e-4b7a-8c41-2f0e5b9a7d13")
 
 # Le CSV ne contient ni nom, ni prénom, ni ville, ni pays. Ils sont tirés de ces listes, de façon

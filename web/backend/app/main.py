@@ -15,6 +15,7 @@ from app.constants.patients import PATIENT_NOT_FOUND_CODE
 from app.core.database import Base, engine
 from app.patients.exceptions import PatientNotFoundError
 from app.patients.router import router as patients_router
+from app.synthetic_patients.router import router as synthetic_patients_router
 from app.users.router import router as users_router
 
 
@@ -60,5 +61,6 @@ api_v1_router.include_router(auth_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(analysis_router)
 api_v1_router.include_router(patients_router)
+api_v1_router.include_router(synthetic_patients_router)
 
 app.include_router(api_v1_router)

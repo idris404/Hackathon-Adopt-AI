@@ -277,6 +277,6 @@ The following inputs remain unresolved and must not receive invented rules:
 - the source field for chronic diseases other than the explicit initial kidney
   disease, diabetes, hypertension, and autoimmune fields;
 - the longitudinal MFI field and unit used by the validated 50% proximity threshold;
-- the behavior of that relative comparison when the preceding value is zero;
+- the versioned assay positivity threshold used when the preceding MFI is zero;
 - increasing or decreasing quantitative assay trends;
 - any Immucor performance table used to arbitrate discordance.

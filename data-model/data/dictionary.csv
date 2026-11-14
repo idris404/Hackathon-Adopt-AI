@@ -46,7 +46,7 @@ profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|hig
 profile.context,restitution,object,true,source-preserving context,Source-preserving sex dialysis rejection-suspicion and organ facts; suspicion is also a scored factor,validated_functional
 profile.factors[].contribution,restitution,integer|null,true,integer|null,Per-factor contribution under PROFILE-1.0.0,validated
 profile.missing_data[].path,restitution,string,true,source field path,Explicit location of missing or contradictory data,validated_functional
-history_pattern,restitution,enum,true,negative_constant|positive_constant|doubtful_constant|evolving|fluctuating|indeterminate,Qualification needs three prior plus current over three years and successive MFI relative gaps at most 50 percent,pending_review
+history_pattern,restitution,enum,true,negative_constant|positive_constant|doubtful_constant|evolving|fluctuating|indeterminate,Qualification needs three prior plus current over three years and successive MFI relative gaps at most 50 percent; from zero use the protocol positivity threshold,pending_review
 trend,restitution,enum,true,increasing|decreasing|stable|indeterminate,Structured trend description,pending_review
 discordances[],restitution,array,true,source-preserving discordance records,Conflicting results on the same serum without automatic arbitration,pending_review
 review_status,restitution,enum,true,human_review_required|candidate_for_simplified_review|blocked,Human workflow state,pending_review

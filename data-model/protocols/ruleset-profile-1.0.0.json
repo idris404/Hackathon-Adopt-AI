@@ -26,7 +26,7 @@
     {"category": "very_high", "minimum": 8, "maximum": null}
   ],
   "missing_data_rule": "A missing or contradictory scoring criterion produces an uncertain category and mandatory professional review.",
-  "history_rule": "A qualified constant history requires three prior analyses plus the current analysis, spanning at least three years, with no discordance and each MFI value differing by no more than 50 percent from the preceding MFI value.",
+  "history_rule": "A qualified constant history requires three prior analyses plus the current analysis, spanning at least three years, with no discordance and each MFI value differing by no more than 50 percent from the preceding MFI value. When the preceding MFI is zero, the change is significant only if the current MFI exceeds the assay positivity threshold supplied by the test protocol.",
   "review_routes": {
     "minimal_with_qualified_constant_history": "simplified_review_candidate",
     "moderate_medium_or_high": "supervised_full_dossier_review",
@@ -36,6 +36,6 @@
   "safety_boundary": "Every result remains decision support and requires explicit human confirmation; no autonomous clinical validation is emitted.",
   "pending_review": [
     "The v3 CSV has explicit initial kidney disease, diabetes, and hypertension fields but no general other-chronic-diseases field. A source field is required before additional chronic diseases can be scored.",
-    "The assay history contract currently has categorical results only. A real MFI history field and the behavior when the preceding MFI is zero are still required before the 50 percent proximity rule can be computed. The generation-only _verite_mfi_dsa_max column is not an analysis input."
+    "The assay history contract currently has categorical results only. A real longitudinal MFI field and a versioned assay positivity threshold are still required before the 50 percent proximity rule can be computed. The generation-only _verite_mfi_dsa_max column is not an analysis input."
   ]
 }

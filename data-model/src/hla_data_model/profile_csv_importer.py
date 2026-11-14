@@ -176,7 +176,13 @@ def _detected_contradictions(row: dict[str, str]) -> list[str]:
 
 def _pregnancy_observation(row: dict[str, str], contradictions: set[str]) -> dict[str, Any]:
     if "pregnancy_dates_with_zero_count" in contradictions:
-        return {"availability": "contradictory", "status": "unknown", "count": None, "dates": []}
+        inferred_count = len(_split(row["grossesse_annees"]))
+        return {
+            "availability": "known",
+            "status": "one" if inferred_count == 1 else "multiple",
+            "count": inferred_count,
+            "dates": [],
+        }
     status = row["grossesse_statut"]
     if status == "inconnu":
         return {"availability": "missing", "status": "unknown", "count": None, "dates": []}

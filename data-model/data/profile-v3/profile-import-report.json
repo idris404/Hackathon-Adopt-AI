@@ -4,6 +4,7 @@
     "unknown_rejection_history_as_none": 3108
   },
   "applied_normalizations": {
+    "pregnancy_dates_with_zero_count": 165,
     "previous_transplant_after_reference_date": 483,
     "transfusion_regular_with_single_event": 470
   },
@@ -47,26 +48,26 @@
     },
     "profiles": {
       "compression": "gzip",
-      "content_sha256": "c8374d9c6c4eb4dca98d7f225c162aa0efe4192833ec16d41a79fb0ea7cb27df",
+      "content_sha256": "0811bc46a439cda1c1e2fb3f6bb7e8eba12257b8740dc77e5a68eab6eb0b3534",
       "file": "profile-scores.jsonl.gz"
     },
     "sources": {
       "compression": "gzip",
-      "content_sha256": "d59c5017a571c0ff9c7c295a76504b1214c8b758fabff90b6f64692bc63e3770",
+      "content_sha256": "e7ce717e352c3e0a3777b5f7de193e531805787d54bc4371860cb7a5e14244ee",
       "file": "profile-source-cases.jsonl.gz"
     }
   },
   "profile_categories": {
-    "high": 5180,
-    "medium": 12786,
+    "high": 5205,
+    "medium": 12843,
     "minimal": 913,
-    "moderate": 14566,
-    "uncertain": 7834,
-    "very_high": 8734
+    "moderate": 14590,
+    "uncertain": 7694,
+    "very_high": 8768
   },
   "profile_score_statuses": {
-    "calculated": 42179,
-    "partially_calculated": 7834
+    "calculated": 42319,
+    "partially_calculated": 7694
   },
   "profile_scores_generated": true,
   "ruleset_version": "PROFILE-1.0.0",
@@ -77,7 +78,6 @@
   },
   "total_records": 51000,
   "unresolved_source_inconsistencies": {
-    "dialysis_before_birth": 359,
-    "pregnancy_dates_with_zero_count": 165
+    "dialysis_before_birth": 359
   }
 }

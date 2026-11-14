@@ -163,13 +163,14 @@ def import_profile_csv_v3(
             key: contradictions[key]
             for key in (
                 "previous_transplant_after_reference_date",
+                "pregnancy_dates_with_zero_count",
                 "transfusion_regular_with_single_event",
             )
             if contradictions[key]
         },
         "unresolved_source_inconsistencies": {
             key: contradictions[key]
-            for key in ("dialysis_before_birth", "pregnancy_dates_with_zero_count")
+            for key in ("dialysis_before_birth",)
             if contradictions[key]
         },
         "source_partitions": dict(sorted(partitions.items())),

@@ -165,6 +165,28 @@ class ProfileCsvV3ImporterTests(unittest.TestCase):
         )
         self.assertEqual(transfusion["contribution"], 1)
 
+    def test_pregnancy_year_overrides_zero_count_as_one_pregnancy(self) -> None:
+        row = base_v3_row()
+        row.update(
+            {
+                "grossesse_statut": "non",
+                "grossesse_nombre": "0",
+                "grossesse_annees": "2018",
+            }
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            report, sources, profiles = self._import_rows(Path(temporary_directory), [row])
+
+        self.assertEqual(
+            sources[0]["patient_profile"]["pregnancy_history"],
+            {"availability": "known", "status": "one", "count": 1, "dates": []},
+        )
+        self.assertEqual(report["applied_normalizations"]["pregnancy_dates_with_zero_count"], 1)
+        pregnancy = next(
+            factor for factor in profiles[0]["profile"]["factors"] if factor["factor_id"] == "PF-02"
+        )
+        self.assertEqual(pregnancy["contribution"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()

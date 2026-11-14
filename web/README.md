@@ -75,12 +75,34 @@ cp .env.example .env
 | PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | racine du dépôt |
 | Backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
 | Frontend | `npm run dev -- --strictPort` | `web/frontend/` |
-| Seed : patients, synthétiques, tests sériques, historique d'événements | `uv run python -m app.seed [--csv CHEMIN] [--serum-csv CHEMIN] [--only patients\|synthetic\|serum\|history] [--reset]` | `web/backend/` |
+| Seed : patients, synthétiques, tests sériques, historique d'événements, compte de démonstration | `uv run python -m app.seed [--csv CHEMIN] [--serum-csv CHEMIN] [--only patients\|synthetic\|serum\|history\|users] [--reset]` | `web/backend/` |
 
 - Backend : <http://localhost:8000> (documentation OpenAPI sur `/docs`)
 - Frontend : <http://localhost:5173>
 
 Dans VS Code, la configuration `dependencies (Docker)` de [.vscode/launch.json](../.vscode/launch.json) lance PostgreSQL.
+
+### 3. Compte de démonstration
+
+Le seed crée un compte pour se connecter sans passer par l'inscription (le frontend n'en a pas) :
+
+| | |
+| --- | --- |
+| Email | `admin@email.fr` |
+| Mot de passe | `password@2026` |
+
+```bash
+# Depuis web/backend/ : seulement le compte (rapide)
+uv run python -m app.seed --only users
+# ou tout le seed, compte compris
+uv run python -m app.seed
+```
+
+- L'email et le mot de passe viennent de `web/.env` (`SEED_USER_EMAIL`, `SEED_USER_PASSWORD`), documentés dans `.env.example`. Pour un autre compte, changer ces deux variables. Seul le seed les lit : l'API ne les charge jamais.
+- Le seed s'arrête avant de toucher à la base si l'une des deux manque ou est invalide (mot de passe de 12 à 256 caractères). Après un `git pull`, copier les deux lignes de `.env.example` dans votre `.env`.
+- Rejouable : si l'email existe déjà, rien n'est modifié, y compris son mot de passe. `--reset` ne supprime pas la table des comptes.
+- Le compte est **superutilisateur** (accès à `/api/v1/users/{id}`) et marqué vérifié, la vérification d'email n'existant pas encore. Ces deux droits sont fixes, dans `backend/app/constants/seed.py`.
+- **Développement local uniquement** : ces identifiants sont publics. Ne jamais les créer ni les conserver sur un environnement réel (données de santé).
 
 ## Dépendances (PostgreSQL)
 

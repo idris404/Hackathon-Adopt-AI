@@ -1,10 +1,11 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import EmailStr, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
+from app.constants.auth import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 from app.constants.database import ASYNC_DB_DRIVER, DEFAULT_DB_HOST
 from app.constants.http import DEFAULT_FRONTEND_URL
 
@@ -37,6 +38,24 @@ class Settings(BaseSettings):
             port=self.db_port,
             database=self.db_name,
         )
+
+
+class SeedSettings(BaseSettings):
+    """Compte de démonstration du seed (`python -m app.seed`, étape `users`).
+
+    Séparé de `Settings` : l'API n'en a pas besoin, elle ne charge donc jamais ce mot de passe, et une
+    valeur invalide ici ne l'empêche pas de démarrer. Lue seulement par le seed, quand l'étape tourne.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=ENV_FILE, env_file_encoding="utf-8", extra="ignore"
+    )
+
+    seed_user_email: EmailStr
+    # Mêmes bornes que l'inscription : le compte doit pouvoir passer `UserCreate`.
+    seed_user_password: SecretStr = Field(
+        min_length=PASSWORD_MIN_LENGTH, max_length=PASSWORD_MAX_LENGTH
+    )
 
 
 @lru_cache

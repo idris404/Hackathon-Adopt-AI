@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from pydantic import SecretStr
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
@@ -10,17 +11,30 @@ from app.conftest import (
     FakePatientRepository,
     FakeSerumTestRepository,
     FakeSyntheticPatientRepository,
+    FakeUserDatabase,
     fake_seed_rows,
     write_seed_csv,
 )
 from app.constants.patient_history import DEMO_PATIENTS, HISTORY_EVENTS
 from app.constants.seed import SeedStage
+from app.core.exceptions import SeedError
+from app.core.security import build_password_helper
 from app.core.database import Base
 from app.patient_history.seed import HistorySeedReport
 from app.patients.seed import PatientSeedReport, patient_uuid_for
-from app.seed import TABLES, SeedReport, describe, find_outdated_tables, parse_args, run_seed
+from app.seed import (
+    TABLES,
+    USER_TABLES,
+    SeedReport,
+    describe,
+    find_outdated_tables,
+    parse_args,
+    run_seed,
+)
 from app.serum_tests.seed import SerumSeedReport
 from app.synthetic_patients.seed import SyntheticSeedReport
+from app.users.seed import DemoUser, UserSeedReport
+from app.users.services import UserManager
 
 pytestmark = pytest.mark.anyio
 
@@ -51,6 +65,16 @@ def serum() -> FakeSerumTestRepository:
 @pytest.fixture
 def history() -> FakePatientHistoryRepository:
     return FakePatientHistoryRepository()
+
+
+@pytest.fixture
+def users(user_db: FakeUserDatabase) -> UserManager:
+    return UserManager(user_db, build_password_helper())
+
+
+@pytest.fixture
+def demo_user(valid_password: str) -> DemoUser:
+    return DemoUser("demo@example.com", SecretStr(valid_password))
 
 
 def serum_row(patient_id: str, test_date: str = "2017-12-09") -> dict[str, str]:
@@ -88,9 +112,11 @@ async def test_the_full_seed_creates_the_patients_then_their_synthetic_patients(
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
     history: FakePatientHistoryRepository,
+    users: UserManager,
+    demo_user: DemoUser,
 ) -> None:
     report = await run_seed(
-        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv
+        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv, user_manager=users, demo_user=demo_user
     )
 
     assert report.patients == PatientSeedReport(read=ROWS, inserted=ROWS)
@@ -101,6 +127,7 @@ async def test_the_full_seed_creates_the_patients_then_their_synthetic_patients(
     assert report.patient_history == HistorySeedReport(
         read=HISTORY_ROWS, inserted=0, without_patient=HISTORY_ROWS
     )
+    assert report.users == UserSeedReport(created=True)
     # Chaque patient synthétique pointe, par `patient_id`, vers un patient créé par la première étape.
     created = {v["patient_id"] for v in patients.stored.values()}
     assert {v["patient_id"] for v in synthetic.stored.values()} == created
@@ -119,6 +146,7 @@ async def test_only_patients_leaves_the_synthetic_patients_alone(
     assert report.synthetic_patients is None
     assert report.serum_tests is None
     assert report.patient_history is None
+    assert report.users is None
     assert len(patients.stored) == ROWS
     assert synthetic.stored == {}
     assert serum.stored == {}
@@ -168,11 +196,15 @@ async def test_replaying_the_full_seed_changes_nothing(
     synthetic: FakeSyntheticPatientRepository,
     serum: FakeSerumTestRepository,
     history: FakePatientHistoryRepository,
+    users: UserManager,
+    demo_user: DemoUser,
 ) -> None:
-    await run_seed(csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv)
+    await run_seed(
+        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv, user_manager=users, demo_user=demo_user
+    )
 
     second = await run_seed(
-        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv
+        csv_path, patients, synthetic, serum, history, serum_csv_path=serum_csv, user_manager=users, demo_user=demo_user
     )
 
     assert second.patients == PatientSeedReport(read=ROWS, inserted=0)
@@ -183,8 +215,62 @@ async def test_replaying_the_full_seed_changes_nothing(
     assert second.patient_history == HistorySeedReport(
         read=HISTORY_ROWS, inserted=0, without_patient=HISTORY_ROWS
     )
+    assert second.users == UserSeedReport(created=False)
     assert patient_uuid_for("P-0") in patients.stored
     assert len(synthetic.stored) == ROWS
+
+
+async def test_only_users_creates_the_account_and_touches_no_patient(
+    csv_path: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
+    users: UserManager,
+    demo_user: DemoUser,
+    user_db: FakeUserDatabase,
+) -> None:
+    report = await run_seed(
+        csv_path, patients, synthetic, serum, history, SeedStage.USERS, user_manager=users, demo_user=demo_user
+    )
+
+    assert report.users == UserSeedReport(created=True)
+    assert report.patients is None and report.synthetic_patients is None
+    assert len(user_db.users) == 1
+    assert patients.stored == {} and synthetic.stored == {} and serum.stored == {}
+
+
+async def test_the_users_stage_needs_a_user_manager(
+    csv_path: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
+) -> None:
+    with pytest.raises(SeedError):
+        await run_seed(csv_path, patients, synthetic, serum, history, SeedStage.USERS)
+
+
+async def test_the_users_stage_needs_the_demo_account_too(
+    csv_path: Path,
+    patients: FakePatientRepository,
+    synthetic: FakeSyntheticPatientRepository,
+    serum: FakeSerumTestRepository,
+    history: FakePatientHistoryRepository,
+    users: UserManager,
+) -> None:
+    with pytest.raises(SeedError):
+        await run_seed(
+            csv_path, patients, synthetic, serum, history, SeedStage.USERS, user_manager=users
+        )
+
+
+def test_the_user_report_says_whether_the_account_was_created_or_already_there() -> None:
+    created = describe(SeedReport(None, None, users=UserSeedReport(created=True)))
+    existing = describe(SeedReport(None, None, users=UserSeedReport(created=False)))
+
+    assert "créé" in created[0]
+    assert "déjà présent" in existing[0]
 
 
 def test_the_report_tells_what_was_inserted_what_was_there_and_what_was_skipped() -> None:
@@ -259,6 +345,11 @@ async def test_only_the_outdated_tables_are_reported() -> None:
     )
 
     assert outdated == ["patients_synthetiques"]
+
+
+def test_reset_never_drops_the_user_table() -> None:
+    # `--reset` supprime `TABLES` : y mettre `user` effacerait les comptes et casserait les sessions.
+    assert not set(USER_TABLES) & set(TABLES)
 
 
 def test_reset_recreates_both_tables_so_it_cannot_be_combined_with_only(

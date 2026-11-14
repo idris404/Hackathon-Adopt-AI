@@ -2,7 +2,7 @@ import pytest
 
 from app.constants.database import ASYNC_DB_DRIVER, DEFAULT_DB_HOST
 from app.constants.http import DEFAULT_FRONTEND_URL
-from app.core.config import Settings
+from app.core.config import SeedSettings, Settings
 
 DB_FIELDS = {"db_user": "adopt_ai", "db_password": "p@ss/word:1", "db_name": "adopt_ai_db", "db_port": 5432}
 
@@ -53,3 +53,23 @@ def test_missing_database_settings_are_rejected(monkeypatch: pytest.MonkeyPatch)
 
     with pytest.raises(ValueError):
         Settings(_env_file=None)  # type: ignore[call-arg]
+
+
+def test_the_api_settings_never_load_the_seed_credentials(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Le mot de passe du seed ne doit pas vivre dans le processus de l'API.
+    monkeypatch.setenv("SEED_USER_EMAIL", "demo@example.com")
+    monkeypatch.setenv("SEED_USER_PASSWORD", "p" * 12)
+
+    settings = build_settings()
+
+    assert not hasattr(settings, "seed_user_password")
+    assert "seed_user" not in repr(settings)
+
+
+def test_the_seed_password_is_not_exposed_when_printing_the_seed_settings() -> None:
+    secret = "an-unprintable-secret"
+    settings = SeedSettings(_env_file=None, seed_user_email="demo@example.com", seed_user_password=secret)  # type: ignore[arg-type]
+
+    assert secret not in repr(settings)

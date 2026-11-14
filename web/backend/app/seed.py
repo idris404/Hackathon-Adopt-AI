@@ -1,7 +1,8 @@
-"""Seed de la base : patients, patients synthétiques, historique sérique, puis événements.
+"""Seed de la base : patients, patients synthétiques, historique sérique, événements, puis le
+compte de démonstration.
 
     uv run python -m app.seed [--csv CHEMIN] [--serum-csv CHEMIN]
-        [--only patients|synthetic|serum|history] [--reset]
+        [--only patients|synthetic|serum|history|users] [--reset]
                                                                       (depuis web/backend/)
 
 Les patients synthétiques, les tests sériques et l'historique d'événements partent des patients
@@ -9,6 +10,12 @@ Les patients synthétiques, les tests sériques et l'historique d'événements p
 `--only serum` ou `--only history` ne relance que cette étape, à condition que les patients
 existent déjà. Rejouable : ce qui est déjà présent n'est pas dupliqué. Une seule transaction :
 tout ou rien.
+
+L'étape `users` crée le compte de démonstration (développement local uniquement) : email et mot de
+passe lus dans web/.env (`SEED_USER_EMAIL`, `SEED_USER_PASSWORD`), le seed s'arrête avant de toucher à
+la base s'ils manquent ou sont invalides. Elle passe en dernier et dans sa propre session : l'adaptateur FastAPI Users valide
+lui-même (`commit`), ce qui ne peut pas se faire dans la transaction des CSV. Si un CSV est invalide,
+l'étape n'est jamais atteinte et aucun compte n'est créé. `--reset` ne touche pas à la table `user`.
 
 Il n'y a pas d'outil de migration : si le schéma d'une table a changé depuis sa création, le seed
 refuse de continuer. `--reset` supprime alors les quatre tables et les recrée (leurs données se
@@ -22,6 +29,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from fastapi_users_db_sqlalchemy import SQLAlchemyUserDatabase
 from sqlalchemy import Connection, Table, inspect
 
 from app.constants.seed import (
@@ -31,6 +39,7 @@ from app.constants.seed import (
 )
 from app.core.database import Base, async_session_maker, engine
 from app.core.exceptions import SeedError
+from app.core.security import build_password_helper
 from app.patient_history.entity import PatientHistory
 from app.patient_history.repository import PatientHistoryRepository
 from app.patient_history.seed import HistorySeedReport, seed_patient_history
@@ -44,6 +53,9 @@ from app.serum_tests.seed import SerumSeedReport, seed_serum_tests
 from app.synthetic_patients.entity import SyntheticPatient
 from app.synthetic_patients.repository import SyntheticPatientRepository
 from app.synthetic_patients.seed import SyntheticSeedReport, seed_synthetic_patients
+from app.users.entity import User
+from app.users.seed import DemoUser, UserSeedReport, load_demo_user, seed_users
+from app.users.services import UserManager
 
 # Ordre de création (les patients d'abord : les clés étrangères pointent vers eux).
 TABLES: Sequence[Table] = (
@@ -53,6 +65,9 @@ TABLES: Sequence[Table] = (
     PatientHistory.__table__,
 )
 
+# Créée si absente, mais jamais supprimée par `--reset` : elle porte les comptes et leurs sessions.
+USER_TABLES: Sequence[Table] = (User.__table__,)
+
 
 @dataclass(frozen=True)
 class SeedReport:
@@ -60,6 +75,7 @@ class SeedReport:
     synthetic_patients: SyntheticSeedReport | None
     serum_tests: SerumSeedReport | None = None
     patient_history: HistorySeedReport | None = None
+    users: UserSeedReport | None = None
 
 
 async def run_seed(
@@ -70,8 +86,10 @@ async def run_seed(
     history_repository: PatientHistoryRepository,
     only: SeedStage | None = None,
     serum_csv_path: Path | None = None,
+    user_manager: UserManager | None = None,
+    demo_user: DemoUser | None = None,
 ) -> SeedReport:
-    patients_report = synthetic_report = serum_report = history_report = None
+    patients_report = synthetic_report = serum_report = history_report = users_report = None
     patients = PatientService(patient_repository)
     if only in (None, SeedStage.PATIENTS):
         patients_report = await seed_patients(patient_repository, csv_path)
@@ -83,7 +101,11 @@ async def run_seed(
         serum_report = await seed_serum_tests(serum_repository, patients, serum_csv_path)
     if only in (None, SeedStage.PATIENT_HISTORY):
         history_report = await seed_patient_history(history_repository, patients)
-    return SeedReport(patients_report, synthetic_report, serum_report, history_report)
+    if only in (None, SeedStage.USERS):
+        if user_manager is None or demo_user is None:
+            raise SeedError("gestionnaire d'utilisateurs ou compte de démonstration manquant")
+        users_report = await seed_users(user_manager, demo_user)
+    return SeedReport(patients_report, synthetic_report, serum_report, history_report, users_report)
 
 
 def find_outdated_tables(connection: Connection) -> list[str]:
@@ -111,7 +133,7 @@ async def prepare_tables(reset: bool) -> None:
                 "patient_history ; leurs données se régénèrent depuis les CSV et les "
                 "événements fictifs)"
             )
-        await connection.run_sync(Base.metadata.create_all, tables=TABLES)
+        await connection.run_sync(Base.metadata.create_all, tables=(*TABLES, *USER_TABLES))
 
 
 async def main(
@@ -121,18 +143,27 @@ async def main(
     reset: bool = False,
 ) -> SeedReport:
     try:
+        # Avant tout travail : un .env incomplet ne doit pas coûter la lecture de 51 000 lignes.
+        demo_user = load_demo_user() if only in (None, SeedStage.USERS) else None
         await prepare_tables(reset)
-        # Une seule transaction : tout ou rien, un CSV invalide en cours de route n'insère rien.
-        async with async_session_maker() as session, session.begin():
-            return await run_seed(
-                csv_path,
-                PatientRepository(session),
-                SyntheticPatientRepository(session),
-                SerumTestRepository(session),
-                PatientHistoryRepository(session),
-                only,
-                serum_csv_path,
+        # Session à part pour les utilisateurs : l'adaptateur FastAPI Users fait son propre `commit`.
+        async with async_session_maker() as user_session:
+            user_manager = UserManager(
+                SQLAlchemyUserDatabase(user_session, User), build_password_helper()
             )
+            # Une seule transaction : tout ou rien, un CSV invalide en cours de route n'insère rien.
+            async with async_session_maker() as session, session.begin():
+                return await run_seed(
+                    csv_path,
+                    PatientRepository(session),
+                    SyntheticPatientRepository(session),
+                    SerumTestRepository(session),
+                    PatientHistoryRepository(session),
+                    only,
+                    serum_csv_path,
+                    user_manager,
+                    demo_user,
+                )
     finally:
         await engine.dispose()
 
@@ -165,12 +196,20 @@ def describe(report: SeedReport) -> list[str]:
             f"historique : {history.read} événements, {history.inserted} insérés, "
             f"{already} déjà présents, {history.without_patient} sans patient (ignorés)"
         )
+    if report.users:
+        lines.append(
+            "compte de démonstration : "
+            + ("créé" if report.users.created else "déjà présent, inchangé")
+        )
     return lines
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Ingère les CSV patients, synthétiques et sériques, puis l'historique fictif."
+        description=(
+            "Ingère les CSV patients, synthétiques et sériques, l'historique fictif, "
+            "puis le compte de démonstration."
+        )
     )
     parser.add_argument("--csv", type=Path, default=DEFAULT_PATIENTS_CSV_PATH)
     parser.add_argument("--serum-csv", type=Path, default=DEFAULT_SERUM_HISTORY_CSV_PATH)

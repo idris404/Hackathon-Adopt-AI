@@ -22,10 +22,25 @@ SEED_BATCH_SIZE: Final = 400
 CSV_COLUMN_PATIENT_ID: Final = "patient_id"
 
 
+# Compte de démonstration créé par l'étape `users` du seed. DÉVELOPPEMENT LOCAL UNIQUEMENT.
+# L'email et le mot de passe viennent de web/.env (SEED_USER_EMAIL, SEED_USER_PASSWORD) : voir
+# `SeedSettings` (core/config.py). Seuls les droits du compte sont fixes, donc ici.
+SEED_USER_IS_SUPERUSER: Final = True
+SEED_USER_IS_VERIFIED: Final = True  # la vérification d'email n'existe pas encore
+SEED_USER_ENV_ERROR: Final = (
+    "SEED_USER_EMAIL et SEED_USER_PASSWORD doivent être définies, avec un email et un mot de passe "
+    "valides, dans web/.env (voir .env.example)"
+)
+
+
 class SeedStage(StrEnum):
-    """Étapes du seed, dans l'ordre : synthétiques, tests sériques et historique partent des patients."""
+    """Étapes du seed, dans l'ordre : synthétiques, tests sériques et historique partent des patients.
+
+    `users` est indépendante des CSV : elle ne lit ni ne dépend des patients.
+    """
 
     PATIENTS = "patients"
     SYNTHETIC_PATIENTS = "synthetic"
     SERUM_TESTS = "serum"
     PATIENT_HISTORY = "history"
+    USERS = "users"

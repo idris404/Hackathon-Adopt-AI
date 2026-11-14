@@ -24,6 +24,7 @@ patient_profile.organ_context.registration_date,source,date|null,true,ISO 8601 d
 patient_profile.previous_transplants.events,source,array,true,synthetic events,Prior transplant source facts; no weight is defined,pending_review
 patient_profile.car_t_treatments.events,source,array,true,synthetic events,CAR-T source facts; no weight is defined,pending_review
 patient_profile.therapeutic_antibody_treatments.events,source,array,true,synthetic events,Therapeutic-antibody source facts; no weight is defined,pending_review
+patient_profile.source_context,source,object,false,synthetic source facts,Optional HLA and detailed profile context; excluded from scoring and ML features,validated_functional
 serums[].serum_id,source,string,true,SER-NNN,Stable synthetic serum identifier,validated_functional
 serums[].collected_at,source,datetime,true,ISO 8601,Synthetic collection time,validated_functional
 serums[].assays[].assay_id,source,string,true,ASSAY-NNN,Stable synthetic assay identifier,validated_functional
@@ -51,3 +52,5 @@ human_validation_required,restitution,boolean,true,true,Human validation safety 
 provenance.source_record_copied,both,boolean,true,false,Confirms no source patient record was copied,validated_functional
 provenance.generator_version,both,string,true,manual-fixture-v1,Fixture generator or authoring version,validated_functional
 provenance.simulation_scenario,both,string,false,explicit synthetic stratum,Generation-only coverage label excluded from model features,validated_functional
+provenance.source_dataset,both,string,false,synthetic dataset identifier,Identifies the synthetic profile dataset used by an importer,validated_functional
+provenance.source_patient_id,both,string,false,synthetic source identifier,Stable join to the original synthetic CSV row; excluded from ML features,validated_functional

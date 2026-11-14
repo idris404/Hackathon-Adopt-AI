@@ -1,0 +1,45 @@
+{
+  "detected_contradictions": {
+    "dialysis_before_birth": 6,
+    "pregnancy_dates_with_zero_count": 1,
+    "previous_transplant_after_reference_date": 8,
+    "transfusion_regular_with_single_event": 11
+  },
+  "excluded_by_reason": {
+    "unsupported_organ:Rein-Pancréas": 20
+  },
+  "excluded_records": 20,
+  "imported_records": 980,
+  "importer_version": "profile-csv-importer-v1",
+  "input_file": "patients_synthetiques.csv",
+  "input_sha256": "d2290e87a709c310150c1f57f9d95a3e929d2e13fa93e77e08a82793132cad91",
+  "outputs": {
+    "profiles": {
+      "file": "profile-restitutions.jsonl",
+      "sha256": "815b23b67764a596a2f1fae4b4511f41ff711bf0153c60d4186de5fda7d760bb"
+    },
+    "sources": {
+      "file": "profile-source-cases.jsonl",
+      "sha256": "25b15313ca5863a326b78e69baf6764a7b15cb0eb884ef0ed9857b2d84a8fc6f"
+    }
+  },
+  "profile_categories": {
+    "high": 1,
+    "medium": 38,
+    "minimal": 73,
+    "moderate": 40,
+    "uncertain": 828
+  },
+  "profile_score_statuses": {
+    "calculated": 152,
+    "partially_calculated": 828
+  },
+  "ruleset_version": "DEMO-PARTIAL-0.2.0",
+  "source_dataset": "patients_synthetiques-v1",
+  "source_risk_columns_ignored": [
+    "niveau_risque",
+    "niveau_risque_statut",
+    "niveau_risque_justification"
+  ],
+  "total_records": 1000
+}

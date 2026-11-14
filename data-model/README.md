@@ -21,6 +21,10 @@ data-model/
 │   ├── dictionary.csv
 │   ├── generated/
 │   │   └── README.md
+│   ├── imported/
+│   │   ├── profile-source-cases.jsonl
+│   │   ├── profile-restitutions.jsonl
+│   │   └── profile-import-report.json
 │   └── scenarios/
 │       ├── complete_case/
 │       ├── incomplete_case/
@@ -44,6 +48,7 @@ data-model/
 │   ├── generator.py
 │   ├── history_analyzer.py
 │   ├── profile_analyzer.py
+│   ├── profile_csv_importer.py
 │   └── validator.py
 └── tests/
     └── test_validation.py
@@ -112,6 +117,24 @@ PYTHONPATH=src python3 -m hla_data_model.feature_pipeline \
 Features, simulated labels, and train/validation/test assignments are separate.
 The split is 70/15/15 and stratified by generation scenario for coverage only.
 
+Import the synthetic profile-only CSV and recompute profile categories with the
+local ruleset:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.profile_csv_importer \
+  --input /path/to/patients_synthetiques.csv \
+  --sources data/imported/profile-source-cases.jsonl \
+  --profiles data/imported/profile-restitutions.jsonl \
+  --report data/imported/profile-import-report.json
+```
+
+The importer accepts only rows explicitly marked synthetic, keeps kidney-only
+records, and excludes kidney-pancreas records. It never copies the source risk
+category, status, or justification. PF-01, PF-02, and PF-07 are recalculated by
+`profile_analyzer.py`; unresolved active factors keep the full category
+`uncertain`. HLA typing and detailed source facts are preserved under
+`patient_profile.source_context` as non-scored context.
+
 ## Patient profile v0.2
 
 The source profile now keeps the following facts explicitly and without medical
@@ -125,6 +148,7 @@ interpretation:
 - kidney workflow status and registration date;
 - previous transplant history;
 - CAR-T treatments and therapeutic-antibody treatments as separate histories.
+- optional source HLA and detailed profile facts as non-scored context.
 
 Sex, dialysis, rejection suspicion, and organ context are copied into the
 restitution as non-scored context. They cannot silently affect the profile

@@ -15,7 +15,7 @@
     "provenance"
   ],
   "properties": {
-    "case_id": {"type": "string", "pattern": "^SYN-CASE-[0-9]{3}$"},
+    "case_id": {"type": "string", "pattern": "^SYN-(CASE-[0-9]{3}|PROFILE-[0-9]{4})$"},
     "synthetic": {"const": true},
     "schema_version": {"const": "0.2.0"},
     "phase": {"enum": ["pre_transplant", "post_transplant"]},
@@ -101,7 +101,7 @@
           "properties": {
             "availability": {"$ref": "#/$defs/availability"},
             "target_organ": {"const": "kidney"},
-            "status": {"enum": ["waiting_list", "suspended", "transplanted", "follow_up", "unknown"]},
+            "status": {"enum": ["pre_registration", "waiting_list", "suspended", "transplanted", "follow_up", "unknown"]},
             "registration_date": {"type": ["string", "null"], "format": "date"}
           }
         },
@@ -131,6 +131,10 @@
             "availability": {"$ref": "#/$defs/availability"},
             "events": {"type": "array", "items": {"type": "object"}}
           }
+        },
+        "source_context": {
+          "type": "object",
+          "description": "Optional source facts preserved for display and explicitly excluded from scoring."
         }
       }
     },
@@ -181,8 +185,10 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1"]},
-        "simulation_scenario": {"type": "string", "minLength": 1}
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1"]},
+        "simulation_scenario": {"type": "string", "minLength": 1},
+        "source_dataset": {"type": "string", "minLength": 1},
+        "source_patient_id": {"type": "string", "minLength": 1}
       }
     }
   },

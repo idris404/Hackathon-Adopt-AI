@@ -13,6 +13,7 @@ PROFILE_CONTEXT_FIELDS = (
     "rejection_suspicion",
     "organ_context",
 )
+OPTIONAL_PROFILE_CONTEXT_FIELDS = ("source_context",)
 UNAVAILABLE_STATES = {"missing", "contradictory"}
 
 
@@ -195,6 +196,13 @@ def analyze_profile(patient_profile: dict[str, Any]) -> dict[str, Any]:
 
     _require_profile_fields(patient_profile)
     context = {name: deepcopy(patient_profile[name]) for name in PROFILE_CONTEXT_FIELDS}
+    context.update(
+        {
+            name: deepcopy(patient_profile[name])
+            for name in OPTIONAL_PROFILE_CONTEXT_FIELDS
+            if name in patient_profile
+        }
+    )
     factors: list[dict[str, Any]] = []
     missing_data: list[dict[str, str]] = []
 

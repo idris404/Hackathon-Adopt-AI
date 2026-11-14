@@ -29,6 +29,7 @@ PROFILE_PATHS = {
     "PF-09": "therapeutic_antibody_treatments",
 }
 PROFILE_CONTEXT_PATHS = ("sex_at_birth", "dialysis", "rejection_suspicion", "organ_context")
+OPTIONAL_PROFILE_CONTEXT_PATHS = ("source_context",)
 DERIVED_SOURCE_KEYS = {
     "profile_score",
     "proposed_risk_category",
@@ -206,6 +207,10 @@ def _validate_source(source: dict[str, Any], errors: list[str]) -> dict[str, dic
             errors,
         )
         for name, observation in profile.items():
+            if name in OPTIONAL_PROFILE_CONTEXT_PATHS:
+                if not isinstance(observation, dict):
+                    errors.append(f"source.patient_profile.{name}: expected an object")
+                continue
             if not isinstance(observation, dict):
                 errors.append(f"source.patient_profile.{name}: expected an object")
                 continue
@@ -333,7 +338,9 @@ def _validate_restitution(
     if not isinstance(context, dict):
         errors.append("restitution.profile.context: expected an object")
     else:
-        for context_name in PROFILE_CONTEXT_PATHS:
+        for context_name in (*PROFILE_CONTEXT_PATHS, *OPTIONAL_PROFILE_CONTEXT_PATHS):
+            if context_name not in source_profile:
+                continue
             if context.get(context_name) != source_profile.get(context_name):
                 errors.append(f"restitution.profile.context.{context_name}: must preserve the source value")
 

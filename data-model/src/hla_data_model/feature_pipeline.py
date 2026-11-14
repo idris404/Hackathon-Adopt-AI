@@ -307,6 +307,7 @@ def build_feature_dataset(
             "review_route",
             "ruleset_version",
             "post_evaluation_data",
+            "patient_profile.source_context",
         ],
         "files": {
             "features": {"name": features_path.name, "sha256": _sha256_text(feature_text)},

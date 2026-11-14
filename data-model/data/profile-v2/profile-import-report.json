@@ -1,0 +1,63 @@
+{
+  "detected_contradictions": {
+    "age_date_mismatch": 73,
+    "dialysis_before_birth": 381,
+    "pregnancy_dates_with_zero_count": 137,
+    "previous_transplant_after_reference_date": 506,
+    "transfusion_regular_with_single_event": 486
+  },
+  "excluded_by_reason": {
+    "unsupported_organ:Rein-Pancréas": 981
+  },
+  "excluded_records": 981,
+  "generation_metadata_columns_excluded": [
+    "_anomalies_injectees"
+  ],
+  "generation_truth_columns_excluded": [
+    "_verite_groupe",
+    "_verite_tgi",
+    "_verite_interdits",
+    "_verite_dsa",
+    "_verite_mfi_dsa_max",
+    "_verite_p_rejet",
+    "_verite_p_rejet_donneur_quelconque"
+  ],
+  "imported_records": 50019,
+  "importer_version": "profile-csv-importer-v2",
+  "input_content_sha256": "c25e0efa6ea78912c0d756ea26eed7b2b7d8b7541787f8e374581cd7eccb02b8",
+  "input_file": "patients_synthetiques_v2.csv.gz",
+  "outcome_statuses": {
+    "not_applicable": 683,
+    "observed": 49313,
+    "ongoing": 23
+  },
+  "outputs": {
+    "outcomes": {
+      "compression": "gzip",
+      "content_sha256": "4ddb0fd16523cfd1096cfaa68361af3eaecf658674fd7da326fc94f86345f55e",
+      "file": "profile-outcomes.jsonl.gz"
+    },
+    "sources": {
+      "compression": "gzip",
+      "content_sha256": "8ae2f28003c98e0b292fbc3638b5d8af9bfd542d936e9c7d4c0304e52c5ab07b",
+      "file": "profile-source-cases.jsonl.gz"
+    }
+  },
+  "phases": {
+    "post_transplant": 49336,
+    "pre_transplant": 683
+  },
+  "profile_scores_generated": false,
+  "profile_scoring_status": "pending_healthcare_professional_scoring",
+  "rejection_within_one_year_labels": {
+    "false": 43423,
+    "none": 704,
+    "true": 5892
+  },
+  "source_dataset": "patients_synthetiques-v2",
+  "source_partitions": {
+    "actuel": 985,
+    "historique": 49034
+  },
+  "total_records": 51000
+}

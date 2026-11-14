@@ -1,7 +1,7 @@
 {
   "ruleset_version": "DEMO-PARTIAL-0.2.0",
   "review_state": "partially_validated",
-  "validated_by": "Ahmed",
+  "validated_by_role": "healthcare_professional",
   "validated_at": "2026-11-14",
   "validation_source": "Validation relayed by Idris in the project conversation.",
   "functional_safety_rules": [

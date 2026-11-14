@@ -1,0 +1,21 @@
+{
+  "generator_version": "profile-history-generator-v1",
+  "input_file": "profile-source-cases.jsonl",
+  "input_sha256": "25b15313ca5863a326b78e69baf6764a7b15cb0eb884ef0ed9857b2d84a8fc6f",
+  "output_file": "source-cases.jsonl",
+  "output_sha256": "aa649336a37cca7d17c6bdab3089c0aaaa1e9bbf5cbfc91f4641c1f2db041436",
+  "record_count": 980,
+  "scenario_counts": {
+    "doubtful_constant": 123,
+    "fluctuating": 122,
+    "missing_result": 122,
+    "negative_constant": 123,
+    "negative_to_positive": 123,
+    "positive_constant": 123,
+    "positive_to_negative": 122,
+    "same_serum_discordance": 122
+  },
+  "scenario_quota_meaning": "synthetic_coverage_only_not_clinical_prevalence",
+  "seed": 20261114,
+  "trend_interpretation": "indeterminate_without_validated_ordinal_rule"
+}

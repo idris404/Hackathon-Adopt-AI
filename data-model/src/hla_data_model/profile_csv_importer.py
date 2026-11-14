@@ -149,6 +149,12 @@ def _has_future_prior_transplant(row: dict[str, str]) -> bool:
 
 def _detected_contradictions(row: dict[str, str]) -> list[str]:
     contradictions: list[str] = []
+    if row["date_naissance"] and row["age"]:
+        reference = date.fromisoformat(row["date_reference"])
+        birth = date.fromisoformat(row["date_naissance"])
+        computed_age = reference.year - birth.year - ((reference.month, reference.day) < (birth.month, birth.day))
+        if int(row["age"]) != computed_age:
+            contradictions.append("age_date_mismatch")
     if row["transfusion_frequence"] == "Régulière" and row["transfusion_nombre"] == "1":
         contradictions.append("transfusion_regular_with_single_event")
     if row["greffes_anterieures"] and _has_future_prior_transplant(row):
@@ -215,6 +221,7 @@ def _source_context(row: dict[str, str]) -> dict[str, Any]:
     antibody_dates = _split(row["ac_therapeutique_dates"])
     return {
         "date_of_birth": row["date_naissance"] or None,
+        "reported_age": _integer(row["age"]),
         "recipient_hla": _hla_loci({locus: row[f"hla_{locus}"] for locus in ("A", "B", "DR", "DQ")}),
         "pathway_source_status": row["statut_parcours"],
         "pathway_status_date": row["statut_date"],
@@ -240,13 +247,8 @@ def _source_context(row: dict[str, str]) -> dict[str, Any]:
 def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], list[str]]:
     contradictions = _detected_contradictions(row)
     contradiction_set = set(contradictions)
-    reference = date.fromisoformat(row["date_reference"])
-    birth = date.fromisoformat(row["date_naissance"]) if row["date_naissance"] else None
     age = _integer(row["age"])
-    if birth is not None:
-        computed_age = reference.year - birth.year - ((reference.month, reference.day) < (birth.month, birth.day))
-        if age != computed_age:
-            raise ProfileImportError(f"{row['patient_id']}: age does not match date_naissance")
+    age_contradictory = "age_date_mismatch" in contradiction_set
 
     previous_events = _prior_transplant_events(row["greffes_anterieures"])
     car_t_events = (
@@ -263,7 +265,9 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
         for administered_at in _split(row["ac_therapeutique_dates"])
     ]
     dialysis_contradictory = "dialysis_before_birth" in contradiction_set
-    dialysis_status = "not_on_dialysis" if row["dialyse_type"] == "Aucune (préemptif)" else "on_dialysis"
+    no_dialysis = row["dialyse_type"] == "Aucune (préemptif)"
+    dialysis_missing = not no_dialysis and not row["dialyse_date_debut"]
+    dialysis_status = "not_on_dialysis" if no_dialysis else "on_dialysis"
     phase = "pre_transplant" if row["phase"] == "pre_greffe" else "post_transplant"
     pathway_status = {
         "Pré-inscription": "pre_registration",
@@ -287,7 +291,10 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
         "phase": phase,
         "evaluation_time": _date_time(row["date_reference"]),
         "patient_profile": {
-            "age": {"availability": "missing" if age is None else "known", "value": age},
+            "age": {
+                "availability": "contradictory" if age_contradictory else "missing" if age is None else "known",
+                "value": None if age_contradictory else age,
+            },
             "sex_at_birth": {"availability": "known", "value": {"F": "female", "M": "male"}[row["sexe"]]},
             "pregnancy_history": _pregnancy_observation(row, contradiction_set),
             "transfusion_history": _transfusion_observation(row, contradiction_set),
@@ -295,9 +302,15 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
             "hypertension": _availability_boolean(row["hta_statut"]),
             "autoimmune_disease": _availability_boolean(row["auto_immune_statut"]),
             "dialysis": {
-                "availability": "contradictory" if dialysis_contradictory else "known",
-                "status": "unknown" if dialysis_contradictory else dialysis_status,
-                "started_at": None if dialysis_contradictory else row["dialyse_date_debut"] or None,
+                "availability": "contradictory"
+                if dialysis_contradictory
+                else "missing"
+                if dialysis_missing
+                else "known",
+                "status": "unknown" if dialysis_contradictory or dialysis_missing else dialysis_status,
+                "started_at": None
+                if dialysis_contradictory or dialysis_missing
+                else row["dialyse_date_debut"] or None,
             },
             "rejection_suspicion": rejection,
             "organ_context": {

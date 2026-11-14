@@ -25,6 +25,8 @@ patient_profile.previous_transplants.events,source,array,true,synthetic events,P
 patient_profile.car_t_treatments.events,source,array,true,synthetic events,CAR-T source facts; no weight is defined,pending_review
 patient_profile.therapeutic_antibody_treatments.events,source,array,true,synthetic events,Therapeutic-antibody source facts; no weight is defined,pending_review
 patient_profile.source_context,source,object,false,synthetic source facts,Optional HLA and detailed profile context; excluded from scoring and ML features,validated_functional
+patient_profile.source_context.initial_kidney_disease,source,string,false,synthetic source category,Initial kidney disease source fact without inferred score,pending_review
+patient_profile.source_context.donor_type,source,string|null,false,Donneur vivant|Donneur décédé|null,Source donor type kept as non-scored context,pending_review
 serums[].serum_id,source,string,true,SER-NNN,Stable synthetic serum identifier,validated_functional
 serums[].collected_at,source,datetime,true,ISO 8601,Synthetic collection time,validated_functional
 serums[].assays[].assay_id,source,string,true,ASSAY-NNN,Stable synthetic assay identifier,validated_functional
@@ -36,7 +38,7 @@ current_result_summary.current_source_results,restitution,array,true,negative|po
 current_result_summary.current_result,restitution,enum|null,true,negative|positive|doubtful|null,Single source category only when latest-serum results agree,validated_functional
 current_result_summary.status,restitution,enum,true,source_consistent|discordance_unresolved|data_missing,Technical aggregation state without clinical arbitration,validated_functional
 profile.profile_score,restitution,integer|null,true,0-6|null,Full score when every active factor has a defined contribution; otherwise null,partially_validated
-profile.validated_partial_score,restitution,integer,true,0-6,Sum of available contributions from Ahmed-validated factors,validated
+profile.validated_partial_score,restitution,integer,true,0-6,Sum of available contributions from healthcare-professional-validated factors,validated
 profile.score_status,restitution,enum,true,partially_calculated|calculated|validated,Calculation state of the full profile score,partially_validated
 profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Validated category when the full score is calculable; otherwise uncertain,validated
 profile.context,restitution,object,true,source-preserving context,Non-scored sex dialysis rejection-suspicion and organ facts,validated_functional
@@ -50,7 +52,13 @@ candidate_for_simplified_review,restitution,boolean,true,false in current rulese
 ruleset_version,restitution,string,true,DEMO-PARTIAL-0.2.0,Version of the partially validated ruleset,validated_functional
 human_validation_required,restitution,boolean,true,true,Human validation safety boundary,validated_functional
 provenance.source_record_copied,both,boolean,true,false,Confirms no source patient record was copied,validated_functional
-provenance.generator_version,both,string,true,manual-fixture-v1,Fixture generator or authoring version,validated_functional
+provenance.generator_version,both,string,true,manual-fixture-v1|deterministic-generator-v1|balanced-generator-v1|profile-csv-importer-v1|profile-csv-importer-v2|profile-history-generator-v1,Deterministic fixture importer or generator version,validated_functional
 provenance.simulation_scenario,both,string,false,explicit synthetic stratum,Generation-only coverage label excluded from model features,validated_functional
 provenance.source_dataset,both,string,false,synthetic dataset identifier,Identifies the synthetic profile dataset used by an importer,validated_functional
 provenance.source_patient_id,both,string,false,synthetic source identifier,Stable join to the original synthetic CSV row; excluded from ML features,validated_functional
+provenance.profile_importer_version,both,string,false,profile-csv-importer-v1,Preserves the upstream deterministic profile importer version,validated_functional
+provenance.source_partition,both,string,false,historique|actuel,Source-provided synthetic partition; excluded from patient features,validated_functional
+outcome.outcome_status,label,string,true,observed|ongoing|not_applicable,Availability state for the separated synthetic outcome label,validated_functional
+outcome.rejection_within_one_year,label,boolean|null,true,true|false|null,Separated synthetic one-year rejection outcome; never a profile input,pending_review
+outcome.rejection_type,label,string|null,true,cellulaire|humoral|mixte|null,Separated synthetic rejection type; never a profile input,pending_review
+outcome.rejection_date,label,date|null,true,ISO 8601 date|null,Separated synthetic rejection date; never a profile input,pending_review

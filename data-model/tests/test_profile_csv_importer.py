@@ -140,6 +140,28 @@ class ProfileCsvImporterTests(unittest.TestCase):
                     root / "report.json",
                 )
 
+    def test_dialysis_without_start_date_remains_missing(self) -> None:
+        row = base_row()
+        row["dialyse_type"] = "Hémodialyse"
+        row["dialyse_date_debut"] = ""
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            _, sources, profiles, *_ = self._import(Path(temporary_directory), [row])
+        self.assertEqual(
+            sources[0]["patient_profile"]["dialysis"],
+            {"availability": "missing", "status": "unknown", "started_at": None},
+        )
+        self.assertIsNone(profiles[0]["profile"]["profile_score"])
+
+    def test_age_date_mismatch_remains_contradictory(self) -> None:
+        row = base_row()
+        row["age"] = "51"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            report, sources, profiles, *_ = self._import(Path(temporary_directory), [row])
+        self.assertEqual(report["detected_contradictions"], {"age_date_mismatch": 1})
+        self.assertEqual(sources[0]["patient_profile"]["age"], {"availability": "contradictory", "value": None})
+        self.assertEqual(sources[0]["patient_profile"]["source_context"]["reported_age"], 51)
+        self.assertIsNone(profiles[0]["profile"]["profile_score"])
+
 
 if __name__ == "__main__":
     unittest.main()

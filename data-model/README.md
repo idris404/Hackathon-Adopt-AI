@@ -8,7 +8,7 @@ Twin hackathon demonstrator. All records are synthetic and deterministic.
 - The source cases never contain real patient data.
 - A missing value is never converted to a negative result or to zero.
 - Medical weights, thresholds, history interpretation, and discordance
-  arbitration remain `pending_review` until Ahmed validates them.
+  arbitration remain `pending_review` until a healthcare professional validates them.
 - The current validator checks structure and safety invariants only. It does not
   compute a medical score.
 - Every expected restitution requires human validation.
@@ -25,6 +25,17 @@ data-model/
 │   │   ├── profile-source-cases.jsonl
 │   │   ├── profile-restitutions.jsonl
 │   │   └── profile-import-report.json
+│   ├── longitudinal/
+│   │   ├── source-cases.jsonl
+│   │   ├── restitutions.jsonl
+│   │   ├── history-generation-report.json
+│   │   └── dataset-report.json
+│   ├── profile-v2/
+│   │   ├── profile-source-cases.jsonl.gz
+│   │   ├── profile-outcomes.jsonl.gz
+│   │   └── profile-import-report.json
+│   ├── raw/
+│   │   └── patients_synthetiques_v2.csv.gz
 │   └── scenarios/
 │       ├── complete_case/
 │       ├── incomplete_case/
@@ -38,6 +49,7 @@ data-model/
 │   ├── ruleset-pending-review.json
 │   └── ruleset-partial-0.2.0.json
 ├── schemas/
+│   ├── profile-outcome.schema.json
 │   ├── source-case.schema.json
 │   └── restitution.schema.json
 ├── src/hla_data_model/
@@ -49,6 +61,8 @@ data-model/
 │   ├── history_analyzer.py
 │   ├── profile_analyzer.py
 │   ├── profile_csv_importer.py
+│   ├── profile_csv_v2_importer.py
+│   ├── profile_history_generator.py
 │   └── validator.py
 └── tests/
     └── test_validation.py
@@ -135,6 +149,43 @@ category, status, or justification. PF-01, PF-02, and PF-07 are recalculated by
 `uncertain`. HLA typing and detailed source facts are preserved under
 `patient_profile.source_context` as non-scored context.
 
+Import the large v2 profile dataset without applying a patient score:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.profile_csv_v2_importer \
+  --input data/raw/patients_synthetiques_v2.csv.gz \
+  --sources data/profile-v2/profile-source-cases.jsonl.gz \
+  --outcomes data/profile-v2/profile-outcomes.jsonl.gz \
+  --report data/profile-v2/profile-import-report.json
+```
+
+The v2 importer keeps profile facts and future outcomes in separate compressed
+JSONL files. The source partitions are retained only as provenance. Generation
+truth columns and injected-anomaly labels are excluded from patient inputs.
+No patient score is generated until the healthcare-professional scoring rules
+are received and versioned.
+
+Attach deterministic longitudinal assay histories to the imported profiles,
+then compute the integrated restitutions:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.profile_history_generator \
+  --input data/imported/profile-source-cases.jsonl \
+  --output data/longitudinal/source-cases.jsonl \
+  --report data/longitudinal/history-generation-report.json \
+  --seed 20261114
+
+PYTHONPATH=src python3 -m hla_data_model.batch_pipeline \
+  --input data/longitudinal/source-cases.jsonl \
+  --restitutions data/longitudinal/restitutions.jsonl \
+  --report data/longitudinal/dataset-report.json
+```
+
+The history scenarios are balanced for software and demo coverage only. They
+are not prevalence estimates. Transitions preserve their source sequence, but
+their trend stays `indeterminate` because no ordinal clinical rule has been
+validated. The generator refuses to overwrite an existing serum history.
+
 ## Patient profile v0.2
 
 The source profile now keeps the following facts explicitly and without medical
@@ -158,7 +209,7 @@ score. Pregnancy, CAR-T, and therapeutic-antibody rules remain `pending_review`.
 
 `profile_analyzer.py` now builds the complete profile restitution from source
 facts. PF-01 (age), PF-02 (pregnancy), and PF-07 (transfusion) use the rules
-validated by Ahmed. A full score and category are emitted only when every other
+validated by a healthcare professional. A full score and category are emitted only when every other
 factor is explicitly absent; an active, missing, or contradictory factor whose
 weight is unresolved keeps the full score null and the category `uncertain`.
 The validated partial score remains visible in both cases.

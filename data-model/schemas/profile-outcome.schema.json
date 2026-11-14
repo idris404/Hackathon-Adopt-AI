@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hla-twin.local/schemas/profile-outcome.schema.json",
+  "title": "Separated synthetic patient outcome",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "case_id",
+    "synthetic",
+    "phase",
+    "outcome_status",
+    "rejection_within_one_year",
+    "rejection_type",
+    "rejection_date",
+    "label_status",
+    "provenance"
+  ],
+  "properties": {
+    "case_id": {"type": "string", "pattern": "^SYN-PROFILE-[0-9]{5}$"},
+    "synthetic": {"const": true},
+    "phase": {"enum": ["pre_transplant", "post_transplant"]},
+    "outcome_status": {"enum": ["observed", "ongoing", "not_applicable"]},
+    "rejection_within_one_year": {"type": ["boolean", "null"]},
+    "rejection_type": {"enum": ["cellulaire", "humoral", "mixte", null]},
+    "rejection_date": {"type": ["string", "null"], "format": "date"},
+    "label_status": {"const": "simulated_source_outcome"},
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_record_copied",
+        "generator_version",
+        "source_dataset",
+        "source_patient_id",
+        "source_partition"
+      ],
+      "properties": {
+        "source_record_copied": {"const": false},
+        "generator_version": {"const": "profile-csv-importer-v2"},
+        "source_dataset": {"const": "patients_synthetiques-v2"},
+        "source_patient_id": {"type": "string", "minLength": 1},
+        "source_partition": {"enum": ["historique", "actuel"]}
+      }
+    }
+  }
+}

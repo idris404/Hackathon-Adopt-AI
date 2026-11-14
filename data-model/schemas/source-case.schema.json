@@ -15,7 +15,7 @@
     "provenance"
   ],
   "properties": {
-    "case_id": {"type": "string", "pattern": "^SYN-(CASE-[0-9]{3}|PROFILE-[0-9]{4})$"},
+    "case_id": {"type": "string", "pattern": "^SYN-(CASE-[0-9]{3}|PROFILE-[0-9]{4,5})$"},
     "synthetic": {"const": true},
     "schema_version": {"const": "0.2.0"},
     "phase": {"enum": ["pre_transplant", "post_transplant"]},
@@ -185,10 +185,12 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1"]},
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1", "profile-csv-importer-v2", "profile-history-generator-v1"]},
         "simulation_scenario": {"type": "string", "minLength": 1},
         "source_dataset": {"type": "string", "minLength": 1},
-        "source_patient_id": {"type": "string", "minLength": 1}
+        "source_patient_id": {"type": "string", "minLength": 1},
+        "profile_importer_version": {"type": "string", "minLength": 1},
+        "source_partition": {"enum": ["historique", "actuel"]}
       }
     }
   },

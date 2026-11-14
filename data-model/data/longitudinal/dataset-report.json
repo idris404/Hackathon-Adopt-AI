@@ -1,0 +1,74 @@
+{
+  "assays": {
+    "current_results": {
+      "data_missing": 122,
+      "discordance_unresolved": 122,
+      "doubtful": 123,
+      "negative": 367,
+      "positive": 246
+    }
+  },
+  "dataset_version": "0.2.0",
+  "errors": [],
+  "generator_versions": {
+    "profile-history-generator-v1": 980
+  },
+  "history_patterns": {
+    "doubtful_constant": 123,
+    "evolving": 245,
+    "fluctuating": 122,
+    "indeterminate": 244,
+    "negative_constant": 123,
+    "positive_constant": 123
+  },
+  "input_file": "source-cases.jsonl",
+  "input_sha256": "aa649336a37cca7d17c6bdab3089c0aaaa1e9bbf5cbfc91f4641c1f2db041436",
+  "invalid_records": 0,
+  "phases": {
+    "post_transplant": 288,
+    "pre_transplant": 692
+  },
+  "profile": {
+    "risk_categories": {
+      "high": 1,
+      "medium": 38,
+      "minimal": 73,
+      "moderate": 40,
+      "uncertain": 828,
+      "very_high": 0
+    },
+    "score_statuses": {
+      "calculated": 152,
+      "partially_calculated": 828,
+      "validated": 0
+    }
+  },
+  "quality": {
+    "cases_with_discordance": 122,
+    "cases_with_missing_data": 308,
+    "discordance_count": 122,
+    "missing_data_entries": 364
+  },
+  "restitutions_file": "restitutions.jsonl",
+  "restitutions_sha256": "a9774b7d17876ce3178e1a156e6362a0a5aab7bc9811c6411480ac58f65c27df",
+  "review_routes": {
+    "blocked": 122,
+    "candidate_for_simplified_review": 0,
+    "human_review_required": 858
+  },
+  "ruleset_versions": {
+    "DEMO-PARTIAL-0.2.0": 980
+  },
+  "simulation_scenarios": {
+    "doubtful_constant": 123,
+    "fluctuating": 122,
+    "missing_result": 122,
+    "negative_constant": 123,
+    "negative_to_positive": 123,
+    "positive_constant": 123,
+    "positive_to_negative": 122,
+    "same_serum_discordance": 122
+  },
+  "total_records": 980,
+  "valid_records": 980
+}

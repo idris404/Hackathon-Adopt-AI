@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Annotated
 
 from sqlalchemy import Date, DateTime, Enum, String, Uuid, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.constants.patients import (
     CITY_MAX_LENGTH,
@@ -29,10 +29,9 @@ GenderColumn = Annotated[
 class Patient(Base):
     """Table `patients` : identité seulement (aucune donnée clinique).
 
-    `patient_id` est l'identifiant fonctionnel unique du patient (« SYN-0001 », la colonne
-    `patient_id` du CSV) ; `id` est sa clé primaire technique. Un patient peut avoir plusieurs
-    patients synthétiques : ils pointent vers lui par leur `patient_id` (contexte
-    `synthetic_patients`), pas par son `id`.
+    `patient_id` est l'identifiant fonctionnel unique du patient (« HIS-00355 », la colonne
+    `patient_id` du CSV) ; `id` est sa clé primaire technique. Les patients synthétiques et
+    les tests sériques pointent vers lui par ce `patient_id`, pas par son `id`.
     """
 
     __tablename__ = PATIENTS_TABLE_NAME
@@ -48,4 +47,11 @@ class Patient(Base):
     country: Mapped[str] = mapped_column(String(COUNTRY_MAX_LENGTH))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
+    )
+    # `lazy="raise"` : chargement explicite (`selectinload`), trié par date de prélèvement.
+    serum_tests: Mapped[list["SerumTest"]] = relationship(
+        "SerumTest",
+        back_populates="patient",
+        lazy="raise",
+        order_by="SerumTest.test_date",
     )

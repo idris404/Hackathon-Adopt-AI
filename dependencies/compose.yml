@@ -11,4 +11,6 @@ services:
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
-      - ./volumes/postgres:/var/lib/postgresql/data
+      # Mount the parent, not .../data. Docker Desktop cannot chown the mount
+      # point itself, and Postgres then exits with "data directory has wrong ownership".
+      - ./volumes/postgres:/var/lib/postgresql

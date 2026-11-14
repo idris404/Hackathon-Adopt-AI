@@ -20,8 +20,34 @@ from app.constants.patients import (
 )
 
 
+class SerumTestRead(BaseModel):
+    """Un prélèvement sérique. Lié au patient par `patient_id` (« HIS-00355 »)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    patient_id: str
+    graft_date: date
+    test_date: date
+    b12: int
+    b12_output: int
+    b13: int
+    b13_output: int
+    dr53: int
+    dr53_output: int
+    dr51: int
+    dr51_output: int
+    dq10: int
+    dq10_output: int
+    profile: str
+
+
 class PatientRead(BaseModel):
-    """Sortie : un patient. `id` est son UUID, `patient_id` son identifiant fonctionnel unique."""
+    """Sortie : un patient et ses tests sériques.
+
+    `id` est son UUID, `patient_id` son identifiant fonctionnel unique. `serum_tests` est
+    vide quand aucun historique n'a été seedé pour ce `patient_id`.
+    """
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -34,6 +60,7 @@ class PatientRead(BaseModel):
     city: str
     country: str
     created_at: datetime
+    serum_tests: list[SerumTestRead] = []
 
 
 class PatientListQuery(BaseModel):

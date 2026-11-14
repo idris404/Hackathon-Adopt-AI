@@ -5,7 +5,13 @@ from datetime import date, datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 
-from app.conftest import AUTH_URL, PATIENTS_URL, FakePatientRepository, make_patient
+from app.conftest import (
+    AUTH_URL,
+    PATIENTS_URL,
+    FakePatientRepository,
+    make_patient,
+    make_serum_test,
+)
 from app.constants.pagination import DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE, SEARCH_MAX_LENGTH, SortOrder
 from app.constants.patients import (
     DEFAULT_PATIENT_SORT_FIELD,
@@ -19,7 +25,8 @@ from app.patients.entity import Patient
 from app.patients.services import PatientService
 
 PATIENT_FIELDS = {
-    "id", "patient_id", "firstname", "lastname", "birth", "gender", "city", "country", "created_at",
+    "id", "patient_id", "firstname", "lastname", "birth", "gender", "city", "country",
+    "created_at", "serum_tests",
 }  # fmt: skip
 PAGE_FIELDS = {"items", "total", "page", "page_size"}
 
@@ -151,6 +158,37 @@ def test_a_patient_is_returned_by_id(
     body = response.json()
     assert set(body) == PATIENT_FIELDS
     assert body["id"] == str(patient.id)
+
+
+def test_a_patient_includes_serum_tests_linked_by_patient_id(
+    logged_in: TestClient, repository: FakePatientRepository
+) -> None:
+    patient = repository.patients[0]
+    patient.patient_id = "HIS-00355"
+    patient.serum_tests = [make_serum_test(patient, b12=175, b12_output=0, profile="C")]
+
+    body = logged_in.get(f"{PATIENTS_URL}/{patient.id}").json()
+
+    assert body["patient_id"] == "HIS-00355"
+    assert body["serum_tests"] == [
+        {
+            "id": str(patient.serum_tests[0].id),
+            "patient_id": "HIS-00355",
+            "graft_date": "2016-08-04",
+            "test_date": "2017-12-09",
+            "b12": 175,
+            "b12_output": 0,
+            "b13": 190,
+            "b13_output": 0,
+            "dr53": 291,
+            "dr53_output": 0,
+            "dr51": 177,
+            "dr51_output": 0,
+            "dq10": 1870,
+            "dq10_output": 1,
+            "profile": "C",
+        }
+    ]
 
 
 def test_an_unknown_patient_is_a_404(logged_in: TestClient) -> None:

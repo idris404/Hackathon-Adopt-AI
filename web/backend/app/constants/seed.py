@@ -6,6 +6,9 @@ from typing import Final
 DEFAULT_PATIENTS_CSV_PATH: Final = (
     Path(__file__).resolve().parents[4] / "data-model" / "data" / "patients_synthetiques_v3.csv"
 )
+DEFAULT_SERUM_HISTORY_CSV_PATH: Final = (
+    Path(__file__).resolve().parents[4] / "data-model" / "data" / "serum_test_history.csv"
+)
 
 # Ligne 1 du fichier = en-tête : les données commencent à la ligne 2.
 FIRST_CSV_DATA_LINE: Final = 2
@@ -20,7 +23,8 @@ CSV_COLUMN_PATIENT_ID: Final = "patient_id"
 
 
 class SeedStage(StrEnum):
-    """Étapes du seed, dans l'ordre : les patients synthétiques partent des patients."""
+    """Étapes du seed, dans l'ordre : synthétiques et tests sériques partent des patients."""
 
     PATIENTS = "patients"
     SYNTHETIC_PATIENTS = "synthetic"
+    SERUM_TESTS = "serum"

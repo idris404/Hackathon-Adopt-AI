@@ -39,6 +39,8 @@ Dans ce fichier et dans `.claude/rules/`, les chemins `backend/…` et `frontend
 
 - **Vite** + **React** + **TypeScript en mode strict** (`"strict": true`, pas de `any` implicite)
 - **Zod** pour la validation des entrées (formulaires, paramètres) ; les types TypeScript sont inférés des schémas Zod (`z.infer`) plutôt que dupliqués à la main.
+- **Tailwind CSS** (plugin `@tailwindcss/vite`), **Motion** et **GSAP** pour le style et les animations.
+- **TanStack Query** (appels API), **TanStack Table** (tableaux), **React Hook Form** (formulaires) et **nuqs** (état dans l'URL, adaptateur `nuqs/adapters/react` posé dans `app/providers.tsx`).
 
 ### Base de données
 

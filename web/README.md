@@ -46,7 +46,7 @@ Le backend et le frontend ne partagent aucun code. Le contrat entre les deux est
 | Couche | Technologies |
 | --- | --- |
 | Backend | Python, FastAPI, SQLAlchemy (ORM), Pydantic, gestion des dépendances avec **uv** |
-| Frontend | Vite, React, TypeScript strict, Zod, React Hook Form, TanStack Query, TanStack Table |
+| Frontend | Vite, React, TypeScript strict, Tailwind CSS, Motion, GSAP, Zod, React Hook Form, TanStack Query, TanStack Table, nuqs |
 | Base de données | PostgreSQL 17 avec l'extension pgvector (Docker Compose) |
 | Tests | Backend : pytest. Frontend : Vitest (unitaires) et Playwright (e2e) |
 

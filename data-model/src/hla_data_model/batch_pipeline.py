@@ -81,6 +81,7 @@ def process_jsonl_dataset(
     phases: Counter[str] = Counter()
     ruleset_versions: Counter[str] = Counter()
     generator_versions: Counter[str] = Counter()
+    simulation_scenarios: Counter[str] = Counter()
     cases_with_missing_data = 0
     missing_data_entries = 0
     cases_with_discordance = 0
@@ -129,6 +130,9 @@ def process_jsonl_dataset(
         phases[restitution["phase"]] += 1
         ruleset_versions[restitution["ruleset_version"]] += 1
         generator_versions[restitution["provenance"]["generator_version"]] += 1
+        simulation_scenario = restitution["provenance"].get("simulation_scenario")
+        if isinstance(simulation_scenario, str):
+            simulation_scenarios[simulation_scenario] += 1
         current_missing_count = len(profile["missing_data"])
         if current_missing_count:
             cases_with_missing_data += 1
@@ -167,6 +171,7 @@ def process_jsonl_dataset(
         },
         "ruleset_versions": dict(sorted(ruleset_versions.items())),
         "generator_versions": dict(sorted(generator_versions.items())),
+        "simulation_scenarios": dict(sorted(simulation_scenarios.items())),
         "errors": errors,
     }
 

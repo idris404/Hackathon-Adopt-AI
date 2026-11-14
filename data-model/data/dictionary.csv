@@ -50,3 +50,4 @@ ruleset_version,restitution,string,true,DEMO-PARTIAL-0.2.0,Version of the partia
 human_validation_required,restitution,boolean,true,true,Human validation safety boundary,validated_functional
 provenance.source_record_copied,both,boolean,true,false,Confirms no source patient record was copied,validated_functional
 provenance.generator_version,both,string,true,manual-fixture-v1,Fixture generator or authoring version,validated_functional
+provenance.simulation_scenario,both,string,false,explicit synthetic stratum,Generation-only coverage label excluded from model features,validated_functional

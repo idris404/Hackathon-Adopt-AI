@@ -38,6 +38,7 @@ data-model/
 │   └── restitution.schema.json
 ├── src/hla_data_model/
 │   ├── batch_pipeline.py
+│   ├── balanced_generator.py
 │   ├── case_analyzer.py
 │   ├── generator.py
 │   ├── history_analyzer.py
@@ -70,6 +71,17 @@ PYTHONPATH=src python3 -m hla_data_model.generator \
 
 The generator never produces a score, risk category, interpretation, decision,
 expected restitution, or performance label.
+
+Generate the recommended stratified demo dataset:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.balanced_generator \
+  --seed 20261114 \
+  --output data/generated/source-cases.jsonl
+```
+
+Its quotas are explicit coverage choices, not clinical prevalence estimates.
+The `simulation_scenario` provenance label must be excluded from ML features.
 
 Process a complete JSONL dataset and generate restitutions plus a quality
 report:

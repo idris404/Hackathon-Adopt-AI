@@ -181,7 +181,8 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1"]}
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1"]},
+        "simulation_scenario": {"type": "string", "minLength": 1}
       }
     }
   },

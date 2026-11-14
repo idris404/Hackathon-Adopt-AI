@@ -13,3 +13,8 @@ The batch pipeline materializes three reproducible files:
 - `restitutions.jsonl`: deterministic integrated outputs;
 - `dataset-report.json`: distributions, quality counters, versions, hashes,
   and line-level validation errors.
+
+The checked dataset uses `balanced-generator-v1`. Its scenario quotas are
+designed to cover product states and must not be presented as real-world
+clinical prevalence. `provenance.simulation_scenario` is generation metadata
+and is prohibited as an ML input feature.

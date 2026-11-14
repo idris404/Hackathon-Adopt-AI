@@ -1,63 +1,74 @@
 {
   "assays": {
     "current_results": {
-      "data_missing": 20,
-      "discordance_unresolved": 0,
-      "doubtful": 25,
-      "negative": 29,
-      "positive": 26
+      "data_missing": 15,
+      "discordance_unresolved": 10,
+      "doubtful": 10,
+      "negative": 35,
+      "positive": 30
     }
   },
   "dataset_version": "0.2.0",
   "errors": [],
   "generator_versions": {
-    "deterministic-generator-v1": 100
+    "balanced-generator-v1": 100
   },
   "history_patterns": {
-    "doubtful_constant": 2,
-    "evolving": 26,
-    "fluctuating": 12,
-    "indeterminate": 52,
-    "negative_constant": 3,
-    "positive_constant": 5
+    "doubtful_constant": 10,
+    "evolving": 15,
+    "fluctuating": 10,
+    "indeterminate": 25,
+    "negative_constant": 25,
+    "positive_constant": 15
   },
   "input_file": "source-cases.jsonl",
-  "input_sha256": "1d22a7e61b9bda550b41bbe94c53b4e8518cfc08e475bbca14a3ab2ed085ca85",
+  "input_sha256": "eabc6228077d6357494416354aef18bdb6730734fc78f15fb8efe141f5a16ac4",
   "invalid_records": 0,
   "phases": {
-    "post_transplant": 66,
-    "pre_transplant": 34
+    "post_transplant": 50,
+    "pre_transplant": 50
   },
   "profile": {
     "risk_categories": {
-      "high": 0,
-      "medium": 1,
-      "minimal": 2,
-      "moderate": 3,
-      "uncertain": 94,
-      "very_high": 0
+      "high": 10,
+      "medium": 15,
+      "minimal": 30,
+      "moderate": 10,
+      "uncertain": 25,
+      "very_high": 10
     },
     "score_statuses": {
-      "calculated": 6,
-      "partially_calculated": 94,
+      "calculated": 75,
+      "partially_calculated": 25,
       "validated": 0
     }
   },
   "quality": {
-    "cases_with_discordance": 0,
-    "cases_with_missing_data": 71,
-    "discordance_count": 0,
-    "missing_data_entries": 110
+    "cases_with_discordance": 10,
+    "cases_with_missing_data": 15,
+    "discordance_count": 10,
+    "missing_data_entries": 30
   },
   "restitutions_file": "restitutions.jsonl",
-  "restitutions_sha256": "30e4b4043c2ebae7a71311cf3c4e4b00bce9b68d9c2881934f2ca3d380c3ed13",
+  "restitutions_sha256": "9d8e1cda818c043d327c5af0f139d5d23218de7e45694f5b9647a893241154a0",
   "review_routes": {
-    "blocked": 0,
+    "blocked": 10,
     "candidate_for_simplified_review": 0,
-    "human_review_required": 100
+    "human_review_required": 90
   },
   "ruleset_versions": {
     "DEMO-PARTIAL-0.2.0": 100
+  },
+  "simulation_scenarios": {
+    "discordant_blocked": 10,
+    "high_doubtful_constant": 10,
+    "incomplete_missing_result": 15,
+    "medium_evolving": 15,
+    "minimal_negative_constant": 15,
+    "minimal_positive_constant": 5,
+    "moderate_negative_constant": 10,
+    "unresolved_profile_positive_constant": 10,
+    "very_high_fluctuating": 10
   },
   "total_records": 100,
   "valid_records": 100

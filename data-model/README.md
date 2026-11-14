@@ -37,6 +37,7 @@ data-model/
 │   ├── source-case.schema.json
 │   └── restitution.schema.json
 ├── src/hla_data_model/
+│   ├── batch_pipeline.py
 │   ├── case_analyzer.py
 │   ├── generator.py
 │   ├── history_analyzer.py
@@ -69,6 +70,19 @@ PYTHONPATH=src python3 -m hla_data_model.generator \
 
 The generator never produces a score, risk category, interpretation, decision,
 expected restitution, or performance label.
+
+Process a complete JSONL dataset and generate restitutions plus a quality
+report:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.batch_pipeline \
+  --input data/generated/source-cases.jsonl \
+  --restitutions data/generated/restitutions.jsonl \
+  --report data/generated/dataset-report.json
+```
+
+Invalid records are isolated in the report with their line number and do not
+prevent valid records from being processed.
 
 ## Patient profile v0.2
 

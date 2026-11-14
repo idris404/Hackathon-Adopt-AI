@@ -1,0 +1,64 @@
+{
+  "assays": {
+    "current_results": {
+      "data_missing": 20,
+      "discordance_unresolved": 0,
+      "doubtful": 25,
+      "negative": 29,
+      "positive": 26
+    }
+  },
+  "dataset_version": "0.2.0",
+  "errors": [],
+  "generator_versions": {
+    "deterministic-generator-v1": 100
+  },
+  "history_patterns": {
+    "doubtful_constant": 2,
+    "evolving": 26,
+    "fluctuating": 12,
+    "indeterminate": 52,
+    "negative_constant": 3,
+    "positive_constant": 5
+  },
+  "input_file": "source-cases.jsonl",
+  "input_sha256": "1d22a7e61b9bda550b41bbe94c53b4e8518cfc08e475bbca14a3ab2ed085ca85",
+  "invalid_records": 0,
+  "phases": {
+    "post_transplant": 66,
+    "pre_transplant": 34
+  },
+  "profile": {
+    "risk_categories": {
+      "high": 0,
+      "medium": 1,
+      "minimal": 2,
+      "moderate": 3,
+      "uncertain": 94,
+      "very_high": 0
+    },
+    "score_statuses": {
+      "calculated": 6,
+      "partially_calculated": 94,
+      "validated": 0
+    }
+  },
+  "quality": {
+    "cases_with_discordance": 0,
+    "cases_with_missing_data": 71,
+    "discordance_count": 0,
+    "missing_data_entries": 110
+  },
+  "restitutions_file": "restitutions.jsonl",
+  "restitutions_sha256": "30e4b4043c2ebae7a71311cf3c4e4b00bce9b68d9c2881934f2ca3d380c3ed13",
+  "review_routes": {
+    "blocked": 0,
+    "candidate_for_simplified_review": 0,
+    "human_review_required": 100
+  },
+  "ruleset_versions": {
+    "DEMO-PARTIAL-0.2.0": 100
+  },
+  "total_records": 100,
+  "valid_records": 100
+}

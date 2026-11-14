@@ -3,10 +3,11 @@
   "synthetic": true,
   "phase": "pre_transplant",
   "profile": {
-    "profile_score": null,
-    "score_status": "pending_review",
-    "proposed_risk_category": "uncertain",
-    "category_status": "pending_review",
+    "profile_score": 0,
+    "validated_partial_score": 0,
+    "score_status": "calculated",
+    "proposed_risk_category": "minimal",
+    "category_status": "validated",
     "context": {
       "sex_at_birth": {"availability": "known", "value": "female"},
       "dialysis": {"availability": "known", "status": "on_dialysis", "started_at": "2024-03-10"},
@@ -14,15 +15,15 @@
       "organ_context": {"availability": "known", "target_organ": "kidney", "status": "waiting_list", "registration_date": "2025-01-20"}
     },
     "factors": [
-      {"factor_id": "PF-01", "availability": "known", "source_value": 52, "contribution": null, "rule_status": "pending_review", "justification": "Age rule awaits Ahmed's validation."},
-      {"factor_id": "PF-02", "availability": "known", "source_value": 0, "contribution": null, "rule_status": "pending_review", "justification": "Pregnancy rule awaits Ahmed's validation."},
-      {"factor_id": "PF-03", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Diabetes contribution is undefined."},
-      {"factor_id": "PF-04", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Hypertension contribution is undefined."},
-      {"factor_id": "PF-05", "availability": "known", "source_value": false, "contribution": null, "rule_status": "blocked", "justification": "Autoimmune disease contribution is undefined."},
-      {"factor_id": "PF-06", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "Previous transplant contribution is undefined."},
-      {"factor_id": "PF-07", "availability": "known", "source_value": {"count": 0, "frequency": "none"}, "contribution": null, "rule_status": "pending_review", "justification": "Transfusion rule awaits Ahmed's validation."},
-      {"factor_id": "PF-08", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "CAR-T contribution is undefined."},
-      {"factor_id": "PF-09", "availability": "known", "source_value": [], "contribution": null, "rule_status": "blocked", "justification": "Other antibody-based treatment contribution is undefined."}
+      {"factor_id": "PF-01", "availability": "known", "source_value": 52, "contribution": 0, "rule_status": "validated", "justification": "Validated rule: age strictly above 65 contributes one point."},
+      {"factor_id": "PF-02", "availability": "known", "source_value": 0, "contribution": 0, "rule_status": "validated", "justification": "Validated rule: zero, one, or multiple pregnancies contribute zero, one, or two points."},
+      {"factor_id": "PF-03", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Diabetes is absent; no unresolved positive contribution applies."},
+      {"factor_id": "PF-04", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Hypertension is absent; no unresolved positive contribution applies."},
+      {"factor_id": "PF-05", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Autoimmune disease is absent; no unresolved positive contribution applies."},
+      {"factor_id": "PF-06", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "Previous transplant is absent; no unresolved positive contribution applies."},
+      {"factor_id": "PF-07", "availability": "known", "source_value": {"count": 0, "frequency": "none"}, "contribution": 0, "rule_status": "validated", "justification": "Validated rule: zero, one, multiple, or explicitly regular transfusions contribute zero to three points."},
+      {"factor_id": "PF-08", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "CAR-T treatment is absent; no unresolved positive contribution applies."},
+      {"factor_id": "PF-09", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "Therapeutic antibody treatment is absent; no unresolved positive contribution applies."}
     ],
     "missing_data": []
   },
@@ -43,11 +44,10 @@
   "discordances": [],
   "review_status": "human_review_required",
   "candidate_for_simplified_review": false,
-  "triggered_rules": ["SAFE-002", "SAFE-003"],
-  "ruleset_version": "DEMO-PENDING-0.1.0",
+  "triggered_rules": ["SAFE-002", "SAFE-003", "SAFE-004"],
+  "ruleset_version": "DEMO-PARTIAL-0.2.0",
   "uncertainties": [
-    "Medical factor weights are not validated.",
-    "The minimum duration and result count for a negative constant history are not validated."
+    "The minimum duration and result count for a constant history are not validated."
   ],
   "human_validation_required": true,
   "provenance": {"source_record_copied": false, "generator_version": "manual-fixture-v1"}

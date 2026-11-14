@@ -9,10 +9,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from .case_analyzer import analyze_case
 from .history_analyzer import HistoryAnalysisError, analyze_history
 
 
-RULESET_VERSION = "DEMO-PENDING-0.1.0"
+RULESET_VERSION = "DEMO-PARTIAL-0.2.0"
+VALIDATED_FACTOR_IDS = {"PF-01", "PF-02", "PF-07"}
 SOURCE_RESULTS = {"negative", "positive", "doubtful"}
 PHASES = {"pre_transplant", "post_transplant"}
 PROFILE_PATHS = {
@@ -312,23 +314,19 @@ def _validate_restitution(
         errors.append("restitution.human_validation_required: must be true")
     if restitution.get("ruleset_version") != RULESET_VERSION:
         errors.append("restitution.ruleset_version: unsupported or unknown ruleset")
-    if restitution.get("candidate_for_simplified_review") is not False:
-        errors.append("restitution.candidate_for_simplified_review: must remain false while rules are unvalidated")
-    if restitution.get("review_status") == "candidate_for_simplified_review":
-        errors.append("restitution.review_status: simplified review is not allowed with the pending ruleset")
-
     profile = restitution.get("profile")
     if not isinstance(profile, dict):
         errors.append("restitution.profile: expected an object")
         return
-    if profile.get("profile_score") is not None:
-        errors.append("restitution.profile.profile_score: must be null while factor weights are unvalidated")
-    if profile.get("score_status") != "pending_review":
-        errors.append("restitution.profile.score_status: must be pending_review")
-    if profile.get("proposed_risk_category") != "uncertain":
-        errors.append("restitution.profile.proposed_risk_category: must be uncertain while the score is unavailable")
-    if profile.get("category_status") != "pending_review":
-        errors.append("restitution.profile.category_status: must be pending_review")
+    if profile.get("profile_score") is not None and (
+        not isinstance(profile["profile_score"], int) or profile["profile_score"] < 0
+    ):
+        errors.append("restitution.profile.profile_score: must be null or a non-negative integer")
+    if not isinstance(profile.get("validated_partial_score"), int) or profile["validated_partial_score"] < 0:
+        errors.append("restitution.profile.validated_partial_score: must be a non-negative integer")
+    expected_score_status = "calculated" if profile.get("profile_score") is not None else "partially_calculated"
+    if profile.get("score_status") != expected_score_status:
+        errors.append(f"restitution.profile.score_status: must be {expected_score_status}")
 
     source_profile = source.get("patient_profile", {})
     context = profile.get("context")
@@ -356,8 +354,13 @@ def _validate_restitution(
             if factor_id in factor_index:
                 errors.append(f"{factor_path}.factor_id: duplicate identifier {factor_id}")
             factor_index[factor_id] = factor
-            if factor.get("contribution") is not None:
-                errors.append(f"{factor_path}.contribution: must be null until its rule is validated")
+            if factor_id in VALIDATED_FACTOR_IDS:
+                if factor.get("rule_status") != "validated":
+                    errors.append(f"{factor_path}.rule_status: must be validated")
+                if factor.get("availability") == "known" and factor.get("contribution") is None:
+                    errors.append(f"{factor_path}.contribution: required for an available validated factor")
+            elif factor.get("contribution") not in {None, 0}:
+                errors.append(f"{factor_path}.contribution: unvalidated active factors cannot receive points")
 
     for factor_id, source_name in PROFILE_PATHS.items():
         source_observation = source_profile.get(source_name, {})
@@ -492,6 +495,14 @@ def _validate_restitution(
         ]
         if restitution_history_missing != analyzed_history["missing_data"]:
             errors.append("restitution.profile.missing_data: history entries must match the deterministic analysis")
+
+    try:
+        analyzed_case = analyze_case(source)
+    except (KeyError, TypeError, ValueError) as error:
+        errors.append(f"source: integrated analysis failed: {error}")
+    else:
+        if restitution != analyzed_case:
+            errors.append("restitution: must match the deterministic integrated case analysis")
 
 
 def validate_scenario_pair(source: dict[str, Any], restitution: dict[str, Any]) -> None:

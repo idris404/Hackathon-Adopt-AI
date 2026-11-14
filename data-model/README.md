@@ -31,11 +31,13 @@ data-model/
 │           ├── source.json
 │           └── expected-restitution.json
 ├── protocols/
-│   └── ruleset-pending-review.json
+│   ├── ruleset-pending-review.json
+│   └── ruleset-partial-0.2.0.json
 ├── schemas/
 │   ├── source-case.schema.json
 │   └── restitution.schema.json
 ├── src/hla_data_model/
+│   ├── case_analyzer.py
 │   ├── generator.py
 │   ├── history_analyzer.py
 │   ├── profile_analyzer.py
@@ -89,10 +91,11 @@ score. Pregnancy, CAR-T, and therapeutic-antibody rules remain `pending_review`.
 ## Profile analyzer
 
 `profile_analyzer.py` now builds the complete profile restitution from source
-facts. It creates PF-01 through PF-09, preserves non-scored context, and reports
-missing or contradictory fields. It deliberately returns a null score, an
-`uncertain` category, and null contributions while the medical rules remain
-unvalidated.
+facts. PF-01 (age), PF-02 (pregnancy), and PF-07 (transfusion) use the rules
+validated by Ahmed. A full score and category are emitted only when every other
+factor is explicitly absent; an active, missing, or contradictory factor whose
+weight is unresolved keeps the full score null and the category `uncertain`.
+The validated partial score remains visible in both cases.
 
 ## History analyzer
 
@@ -101,6 +104,15 @@ serum, exposes missing results and same-serum discordances, and describes
 constant, evolving, fluctuating, or indeterminate histories. It emits `stable`
 only for repeated identical source categories. It never emits `increasing` or
 `decreasing` without a validated ordinal or quantitative rule.
+
+## Case integration
+
+`case_analyzer.py` combines the profile and history outputs into the complete
+restitution contract. With the pending ruleset it can emit only
+`human_review_required` or `blocked` while the exact negative-constant history
+definition remains pending. The simplified-review route is encoded but cannot
+activate until that history definition is validated, and it will always retain
+human confirmation.
 
 The project has no runtime dependency outside the Python standard library.
 

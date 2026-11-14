@@ -48,12 +48,16 @@ class ProfileAnalyzerTests(unittest.TestCase):
         analyze_profile(source["patient_profile"])
         self.assertEqual(source["patient_profile"], before)
 
-    def test_all_contributions_remain_null(self) -> None:
+    def test_validated_rules_produce_a_minimal_calculable_profile(self) -> None:
         source, _ = load_scenario("complete_case")
         result = analyze_profile(source["patient_profile"])
-        self.assertTrue(all(factor["contribution"] is None for factor in result["factors"]))
-        self.assertIsNone(result["profile_score"])
-        self.assertEqual(result["proposed_risk_category"], "uncertain")
+        factors = {factor["factor_id"]: factor for factor in result["factors"]}
+        self.assertEqual(result["profile_score"], 0)
+        self.assertEqual(result["validated_partial_score"], 0)
+        self.assertEqual(result["proposed_risk_category"], "minimal")
+        for factor_id in ("PF-01", "PF-02", "PF-07"):
+            self.assertEqual(factors[factor_id]["rule_status"], "validated")
+            self.assertEqual(factors[factor_id]["contribution"], 0)
 
     def test_missing_required_field_returns_structured_failure(self) -> None:
         source, _ = load_scenario("complete_case")
@@ -77,14 +81,81 @@ class ProfileAnalyzerTests(unittest.TestCase):
             },
             result["missing_data"],
         )
+        self.assertIsNone(result["profile_score"])
+        self.assertEqual(result["proposed_risk_category"], "uncertain")
 
-    def test_generated_profiles_are_analyzable_without_medical_scores(self) -> None:
+    def test_generated_profiles_use_only_available_validated_scores(self) -> None:
         for source in generate_source_cases(100, seed=20261114):
             result = analyze_profile(source["patient_profile"])
             self.assertEqual(len(result["factors"]), 9)
-            self.assertIsNone(result["profile_score"])
-            self.assertEqual(result["score_status"], "pending_review")
-            self.assertTrue(all(factor["contribution"] is None for factor in result["factors"]))
+            self.assertIsInstance(result["validated_partial_score"], int)
+            if result["profile_score"] is None:
+                self.assertEqual(result["score_status"], "partially_calculated")
+                self.assertEqual(result["proposed_risk_category"], "uncertain")
+            else:
+                self.assertEqual(result["score_status"], "calculated")
+                self.assertNotEqual(result["proposed_risk_category"], "uncertain")
+
+    def test_validated_boundary_rules_reach_very_high(self) -> None:
+        source, _ = load_scenario("complete_case")
+        profile = deepcopy(source["patient_profile"])
+        profile["age"]["value"] = 66
+        profile["pregnancy_history"].update({"status": "multiple", "count": 2})
+        profile["transfusion_history"].update({"count": 4, "frequency": "regular"})
+        result = analyze_profile(profile)
+        factors = {factor["factor_id"]: factor for factor in result["factors"]}
+
+        self.assertEqual(factors["PF-01"]["contribution"], 1)
+        self.assertEqual(factors["PF-02"]["contribution"], 2)
+        self.assertEqual(factors["PF-07"]["contribution"], 3)
+        self.assertEqual(result["profile_score"], 6)
+        self.assertEqual(result["proposed_risk_category"], "very_high")
+
+    def test_age_equal_to_65_contributes_zero(self) -> None:
+        source, _ = load_scenario("complete_case")
+        profile = deepcopy(source["patient_profile"])
+        profile["age"]["value"] = 65
+        result = analyze_profile(profile)
+        factor = next(item for item in result["factors"] if item["factor_id"] == "PF-01")
+        self.assertEqual(factor["contribution"], 0)
+
+    def test_active_unresolved_factor_keeps_full_score_unknown(self) -> None:
+        source, _ = load_scenario("complete_case")
+        profile = deepcopy(source["patient_profile"])
+        profile["hypertension"]["value"] = True
+        result = analyze_profile(profile)
+        self.assertIsNone(result["profile_score"])
+        self.assertEqual(result["validated_partial_score"], 0)
+        self.assertEqual(result["proposed_risk_category"], "uncertain")
+
+    def test_all_validated_score_categories(self) -> None:
+        source, _ = load_scenario("complete_case")
+        cases = (
+            (0, 52, 0, 0, "none", "minimal"),
+            (1, 66, 0, 0, "none", "moderate"),
+            (2, 52, 2, 0, "none", "medium"),
+            (3, 52, 0, 4, "regular", "medium"),
+            (4, 66, 0, 4, "regular", "medium"),
+            (5, 52, 2, 4, "regular", "high"),
+            (6, 66, 2, 4, "regular", "very_high"),
+        )
+        for score, age, pregnancies, transfusions, frequency, category in cases:
+            with self.subTest(score=score):
+                profile = deepcopy(source["patient_profile"])
+                profile["age"]["value"] = age
+                profile["pregnancy_history"].update(
+                    {
+                        "status": "none" if pregnancies == 0 else "one" if pregnancies == 1 else "multiple",
+                        "count": pregnancies,
+                    }
+                )
+                profile["transfusion_history"].update(
+                    {"count": transfusions, "frequency": frequency}
+                )
+                result = analyze_profile(profile)
+                self.assertEqual(result["profile_score"], score)
+                self.assertEqual(result["proposed_risk_category"], category)
+                self.assertEqual(result["category_status"], "validated")
 
 
 if __name__ == "__main__":

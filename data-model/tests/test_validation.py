@@ -58,13 +58,13 @@ class ScenarioValidationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValidationError, "must preserve the source value"):
             validate_scenario_pair(source, invalid)
 
-    def test_pending_ruleset_cannot_propose_simplified_review(self) -> None:
+    def test_unvalidated_negative_constant_definition_prevents_simplified_review(self) -> None:
         source, restitution = load_scenario("complete_case")
         invalid = deepcopy(restitution)
         invalid["candidate_for_simplified_review"] = True
         invalid["review_status"] = "candidate_for_simplified_review"
 
-        with self.assertRaisesRegex(ValidationError, "must remain false"):
+        with self.assertRaisesRegex(ValidationError, "integrated case analysis"):
             validate_scenario_pair(source, invalid)
 
     def test_source_data_cannot_contain_derived_score(self) -> None:
@@ -122,6 +122,14 @@ class ScenarioValidationTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValidationError, "occurs after evaluation_time"):
             validate_scenario_pair(invalid, restitution)
+
+    def test_integrated_uncertainties_cannot_be_rewritten(self) -> None:
+        source, restitution = load_scenario("complete_case")
+        invalid = deepcopy(restitution)
+        invalid["uncertainties"] = []
+
+        with self.assertRaisesRegex(ValidationError, "integrated case analysis"):
+            validate_scenario_pair(source, invalid)
 
 
 class GeneratorTests(unittest.TestCase):

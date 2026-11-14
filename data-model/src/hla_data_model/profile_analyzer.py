@@ -43,13 +43,20 @@ def _events(name: str) -> Callable[[dict[str, Any]], Any]:
 
 
 FACTOR_DEFINITIONS = (
-    FactorDefinition("PF-01", "age", "Age", "pending_review", "Age rule awaits Ahmed's validation.", _scalar("age")),
+    FactorDefinition(
+        "PF-01",
+        "age",
+        "Age",
+        "validated",
+        "Validated rule: age strictly above 65 contributes one point.",
+        _scalar("age"),
+    ),
     FactorDefinition(
         "PF-02",
         "pregnancy_history",
         "Pregnancy history",
-        "pending_review",
-        "Pregnancy rule awaits Ahmed's validation.",
+        "validated",
+        "Validated rule: zero, one, or multiple pregnancies contribute zero, one, or two points.",
         _count("pregnancy_history"),
     ),
     FactorDefinition(
@@ -83,8 +90,8 @@ FACTOR_DEFINITIONS = (
         "PF-07",
         "transfusion_history",
         "Transfusion history",
-        "pending_review",
-        "Transfusion rule awaits Ahmed's validation.",
+        "validated",
+        "Validated rule: zero, one, multiple, or explicitly regular transfusions contribute zero to three points.",
         lambda profile: {
             "count": profile["transfusion_history"].get("count"),
             "frequency": profile["transfusion_history"].get("frequency"),
@@ -131,6 +138,48 @@ def _factor_justification(definition: FactorDefinition, availability: str) -> st
     return definition.justification
 
 
+def _validated_contribution(
+    definition: FactorDefinition,
+    observation: dict[str, Any],
+    source_value: Any,
+) -> int | None:
+    if observation.get("availability") != "known":
+        return None
+    if definition.rule_status != "validated":
+        if source_value is False or source_value == []:
+            return 0
+        return None
+    if definition.factor_id == "PF-01":
+        return 1 if isinstance(source_value, int) and source_value > 65 else 0
+    if definition.factor_id == "PF-02":
+        if not isinstance(source_value, int):
+            return None
+        return 0 if source_value == 0 else 1 if source_value == 1 else 2
+    if definition.factor_id == "PF-07":
+        frequency = source_value.get("frequency")
+        count = source_value.get("count")
+        if frequency == "regular":
+            return 3
+        if not isinstance(count, int) or frequency == "unknown":
+            return None
+        return 0 if count == 0 else 1 if count == 1 else 2
+    return None
+
+
+def _risk_category(profile_score: int | None) -> tuple[str, str]:
+    if profile_score is None or profile_score > 6:
+        return "uncertain", "pending_review"
+    if profile_score == 0:
+        return "minimal", "validated"
+    if profile_score == 1:
+        return "moderate", "validated"
+    if profile_score <= 4:
+        return "medium", "validated"
+    if profile_score == 5:
+        return "high", "validated"
+    return "very_high", "validated"
+
+
 def _require_profile_fields(patient_profile: dict[str, Any]) -> None:
     required = set(PROFILE_CONTEXT_FIELDS) | {definition.source_field for definition in FACTOR_DEFINITIONS}
     missing = sorted(required - patient_profile.keys())
@@ -152,14 +201,19 @@ def analyze_profile(patient_profile: dict[str, Any]) -> dict[str, Any]:
     for definition in FACTOR_DEFINITIONS:
         observation = patient_profile[definition.source_field]
         availability = observation.get("availability")
+        source_value = definition.value_reader(patient_profile)
+        contribution = _validated_contribution(definition, observation, source_value)
+        justification = _factor_justification(definition, availability)
+        if definition.rule_status != "validated" and contribution == 0:
+            justification = f"{definition.label} is absent; no unresolved positive contribution applies."
         factors.append(
             {
                 "factor_id": definition.factor_id,
                 "availability": availability,
-                "source_value": definition.value_reader(patient_profile),
-                "contribution": None,
+                "source_value": source_value,
+                "contribution": contribution,
                 "rule_status": definition.rule_status,
-                "justification": _factor_justification(definition, availability),
+                "justification": justification,
             }
         )
         if availability in UNAVAILABLE_STATES:
@@ -184,11 +238,25 @@ def analyze_profile(patient_profile: dict[str, Any]) -> dict[str, Any]:
                 }
             )
 
+    validated_partial_score = sum(
+        factor["contribution"]
+        for factor in factors
+        if factor["rule_status"] == "validated" and isinstance(factor["contribution"], int)
+    )
+    profile_score = (
+        sum(factor["contribution"] for factor in factors)
+        if all(isinstance(factor["contribution"], int) for factor in factors)
+        else None
+    )
+    if missing_data:
+        profile_score = None
+    proposed_risk_category, category_status = _risk_category(profile_score)
     return {
-        "profile_score": None,
-        "score_status": "pending_review",
-        "proposed_risk_category": "uncertain",
-        "category_status": "pending_review",
+        "profile_score": profile_score,
+        "validated_partial_score": validated_partial_score,
+        "score_status": "calculated" if profile_score is not None else "partially_calculated",
+        "proposed_risk_category": proposed_risk_category,
+        "category_status": category_status,
         "context": context,
         "factors": factors,
         "missing_data": missing_data,

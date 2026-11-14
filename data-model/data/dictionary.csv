@@ -34,9 +34,10 @@ serums[].assays[].source_result,source,enum|null,true,negative|positive|doubtful
 current_result_summary.current_source_results,restitution,array,true,negative|positive|doubtful,Distinct source categories on the latest serum,validated_functional
 current_result_summary.current_result,restitution,enum|null,true,negative|positive|doubtful|null,Single source category only when latest-serum results agree,validated_functional
 current_result_summary.status,restitution,enum,true,source_consistent|discordance_unresolved|data_missing,Technical aggregation state without clinical arbitration,validated_functional
-profile.profile_score,restitution,integer|null,true,non-negative|null,Derived score; null while weights are unresolved,pending_review
-profile.score_status,restitution,enum,true,pending_review|validated,Review state of the score,pending_review
-profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Proposed category; uncertain in current ruleset,pending_review
+profile.profile_score,restitution,integer|null,true,0-6|null,Full score when every active factor has a defined contribution; otherwise null,partially_validated
+profile.validated_partial_score,restitution,integer,true,0-6,Sum of available contributions from Ahmed-validated factors,validated
+profile.score_status,restitution,enum,true,partially_calculated|calculated|validated,Calculation state of the full profile score,partially_validated
+profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Validated category when the full score is calculable; otherwise uncertain,validated
 profile.context,restitution,object,true,source-preserving context,Non-scored sex dialysis rejection-suspicion and organ facts,validated_functional
 profile.factors[].contribution,restitution,integer|null,true,integer|null,Per-factor contribution; null before validation,pending_review
 profile.missing_data[].path,restitution,string,true,source field path,Explicit location of missing or contradictory data,validated_functional
@@ -45,7 +46,7 @@ trend,restitution,enum,true,increasing|decreasing|stable|indeterminate,Structure
 discordances[],restitution,array,true,source-preserving discordance records,Conflicting results on the same serum without automatic arbitration,pending_review
 review_status,restitution,enum,true,human_review_required|candidate_for_simplified_review|blocked,Human workflow state,pending_review
 candidate_for_simplified_review,restitution,boolean,true,false in current ruleset,Simplified-review candidate flag,pending_review
-ruleset_version,restitution,string,true,DEMO-PENDING-0.1.0,Version of the applied pending ruleset,validated_functional
+ruleset_version,restitution,string,true,DEMO-PARTIAL-0.2.0,Version of the partially validated ruleset,validated_functional
 human_validation_required,restitution,boolean,true,true,Human validation safety boundary,validated_functional
 provenance.source_record_copied,both,boolean,true,false,Confirms no source patient record was copied,validated_functional
 provenance.generator_version,both,string,true,manual-fixture-v1,Fixture generator or authoring version,validated_functional

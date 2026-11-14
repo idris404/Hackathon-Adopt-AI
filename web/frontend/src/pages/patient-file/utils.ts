@@ -28,9 +28,9 @@ import {
   patientSchema,
   syntheticPatientPageSchema,
   type PatientResponse,
-  type SerumEvolution,
   type SyntheticPatientResponse,
 } from './schemas'
+import type { SerumEvolution } from '../../shared/schemas/serum'
 import { addDays, ageInYears, formatLongDate, formatShortDate, parseIsoDate } from '../../shared/utils/dates'
 
 export { addDays, ageInYears, formatLongDate, formatShortDate }

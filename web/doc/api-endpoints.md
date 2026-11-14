@@ -2,7 +2,7 @@
 
 Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vivent sous `/api/v1` ([D-01](api-decisions.md#d-01--versionnement-par-préfixe-apiv1)). Les décisions derrière chaque comportement sont dans [api-decisions.md](api-decisions.md) ; les renvois `D-xx` y mènent.
 
-Dernière mise à jour : 2026-11-14 · 14 opérations.
+Dernière mise à jour : 2026-11-14 · 16 opérations.
 
 ## Vue d'ensemble
 
@@ -19,6 +19,8 @@ Dernière mise à jour : 2026-11-14 · 14 opérations.
 | `GET` | `/patients/{id}` | Session | Un patient, avec ses tests sériques |
 | `GET` | `/synthetic-patients` | Session | Liste paginée des patients synthétiques |
 | `GET` | `/patients/{id}/synthetic-patients` | Session | Les patients synthétiques d'un patient |
+| `GET` | `/signatures/queue` | Session | File « À signer » : les cas simples à valider |
+| `POST` | `/signatures` | Session | Signer (valider) le cas d'un patient |
 
 **Protection « Session »** : cookie `HttpOnly` posé par `POST /auth/login`. Le client doit l'envoyer avec chaque requête (`credentials: "include"`). Sans session valide : `401`.
 
@@ -58,6 +60,7 @@ Les endpoints de liste (`/patients`, `/synthetic-patients`, `/patients/{id}/synt
 | `401` | `{"detail": "Unauthorized"}` | Pas de session valide ou compte inactif |
 | `403` | `{"detail": "Forbidden"}` | Session valide mais droits insuffisants (`/users/{id}`) |
 | `404` | `{"detail": "PATIENT_NOT_FOUND"}` | Patient inconnu |
+| `409` | `{"detail": "PATIENT_ALREADY_SIGNED"}` | Patient déjà signé (`POST /signatures`) |
 | `400` | `{"detail": "LOGIN_BAD_CREDENTIALS"}` | Identifiants invalides (même code pour email inconnu, mauvais mot de passe ou compte désactivé) |
 | `405` | `{"detail": "Method Not Allowed"}` | Écriture tentée sur une ressource en lecture seule ([D-09](api-decisions.md#d-09--patients-et-patients-synthétiques-en-lecture-seule)) |
 | `422` | `{"detail": [ {loc, msg, type}, … ]}` | Entrée invalide : format de FastAPI, un objet par champ fautif |
@@ -261,3 +264,36 @@ Les patients synthétiques **d'un patient**, par l'UUID `id` du patient. Paramè
 | `id` qui n'est pas un UUID | `422` |
 
 La différence entre « patient sans patient synthétique » (`200` vide) et « patient inexistant » (`404`) est volontaire ([D-15](api-decisions.md#d-15--lendpoint-imbriqué-distingue-patient-inconnu-et-liste-vide)) ; `GET /synthetic-patients?patient_id=` ne fait pas cette distinction.
+
+---
+
+## Signatures
+
+Table `patient_signatures` : la validation d'un cas simple par un soignant ([D-23](api-decisions.md#d-23--signature-clinique-des-cas-simples)). Une signature par patient, sans annulation.
+
+### `GET /signatures/queue`
+
+Les cas que l'algorithme traite seul et qui attendent la signature d'un soignant. Un cas est éligible si le patient a un prélèvement de profil sérique `A` (constant), au plus **3** événements d'historique, et aucune signature. Tri : le plus court historique d'abord, puis `patient_id`. Pas de paramètre.
+
+Réponse `200` :
+
+```json
+{ "items": [ Patient, … ], "remaining": 497 }
+```
+
+- `items` : au plus **5** `Patient`, au même format que `GET /patients/{id}` (avec `serum_evolution`).
+- `remaining` : le nombre total de cas éligibles, page comprise.
+
+Erreurs : `401`.
+
+### `POST /signatures`
+
+Corps JSON `{"patient_id": "<UUID du patient>"}` : l'UUID `id`, pas le `patient_id` fonctionnel. Un champ inconnu est refusé.
+
+Réponse `201` :
+
+```json
+{ "patient_id": "HIS-00001", "signed_by": "<UUID de l'utilisateur>", "signed_at": "2026-11-14T18:05:00Z" }
+```
+
+Le patient quitte alors la file. Erreurs : `401`, `404 PATIENT_NOT_FOUND`, `409 PATIENT_ALREADY_SIGNED`, `422`.

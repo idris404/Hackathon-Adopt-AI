@@ -2,7 +2,7 @@ import { flexRender } from '@tanstack/react-table'
 import type { LegacyReactTable } from '@tanstack/react-table/legacy'
 
 import { mockClinical, type PatientFile, type RenalRow } from '../utils'
-import { SerumProfile } from './SerumEvolution'
+import { SerumProfile } from '../../../shared/components/SerumEvolution'
 
 export function Dossier({ file, table }: { file: PatientFile; table: LegacyReactTable<RenalRow> }) {
   return (

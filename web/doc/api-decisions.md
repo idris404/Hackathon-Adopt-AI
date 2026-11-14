@@ -12,6 +12,7 @@ Dernière mise à jour : 2026-11-14.
 | **Analyse** | [D-10](#d-10--le-résultat-danalyse-est-public-parce-quil-est-synthétique) Route publique · [D-11](#d-11--types-lâches-là-où-le-format-nest-pas-connu) Types lâches |
 | **Patients et patients synthétiques** | [D-12](#d-12--endpoint-de-détail-dun-patient) Détail · [D-13](#d-13--la-liaison-se-fait-par-patient_id-pas-par-id) Liaison · [D-14](#d-14--identités-fictives-et-déterministes) Identités fictives · [D-15](#d-15--lendpoint-imbriqué-distingue-patient-inconnu-et-liste-vide) Route imbriquée · [D-16](#d-16--les-vérités-terrain-sont-exposées-mais-non-triables) Vérités terrain · [D-17](#d-17--taille-de-page-plafonnée-à-100) Taille de page · [D-18](#d-18--un-contexte-à-part-qui-passe-par-le-service-patients) Contextes · [D-19](#d-19--filtres-exposés-sur-les-patients-synthétiques) Filtres · [D-20](#d-20--dans-les-url-id-est-luuid-pas-le-patient_id) Nommage des URL |
 | **Données et seed** | [D-21](#d-21--seed-en-deux-étapes-rejouable-à-ids-stables) Seed · [D-22](#d-22--pas-de-migrations-reset-des-tables-et-détection-de-schéma-obsolète) Migrations |
+| **Signature** | [D-23](#d-23--signature-clinique-des-cas-simples) Signature clinique |
 
 ---
 
@@ -182,6 +183,17 @@ Dernière mise à jour : 2026-11-14.
 - **Décision** : les tables sont créées par `create_all` (au démarrage du backend ou par le seed), qui **ne modifie pas** une table existante. Le seed compare les colonnes réelles à celles des entités et **refuse de continuer** si elles diffèrent (« schéma obsolète »). `--reset` supprime alors `patients` et `patients_synthetiques` et les recrée. Les tables des utilisateurs et des sessions ne sont jamais touchées.
 - **Pourquoi** : aucun outil de migration n'est en place, et ces deux tables se régénèrent intégralement depuis le CSV.
 - **Conséquences** : le backend ne vérifie pas le schéma au démarrage : après une modification d'entité, il faut relancer le seed avec `--reset`, sinon les endpoints concernés échouent en `500`. Ce n'est acceptable que tant que les données sont régénérables ; l'arrivée de données saisies par des utilisateurs imposera un vrai outil de migration.
+
+---
+
+## Signature
+
+### D-23 — Signature clinique des cas simples
+
+- **Statut** : Demandée (section « À signer », signature enregistrée côté serveur) ; les seuils sont un choix de conception, **à confirmer**
+- **Décision** : `GET /signatures/queue` propose au plus 5 cas simples : profil sérique `A`, au plus 3 événements d'historique, pas encore signés. `POST /signatures` enregistre la signature dans `patient_signatures` : `patient_id` unique, `signed_by` (l'utilisateur de la session), `signed_at` (horodatage serveur). Tout utilisateur connecté peut signer ; une signature ne s'annule pas. Les patients restent en lecture seule ([D-09](#d-09--patients-et-patients-synthétiques-en-lecture-seule)) : la signature est une ressource à part.
+- **Pourquoi** : l'algorithme traite seul les cas stables ; le soignant les vérifie et les valide. La traçabilité demandée par D-09 pour toute écriture tient dans `signed_by` et `signed_at`.
+- **Conséquences** : `patient_id` n'est pas une clé étrangère : `seed --reset` recrée `patients` sans toucher aux signatures ([D-22](#d-22--pas-de-migrations-reset-des-tables-et-détection-de-schéma-obsolète)), et les `patient_id` sont stables d'un seed à l'autre. Les données actuelles n'ont d'historique que pour dix patients : la file contient en pratique les patients de profil `A` sans historique. Les indicateurs de la page (cas traités hier, cette semaine) sont fictifs côté frontend.
 
 ---
 

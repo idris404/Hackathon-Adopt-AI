@@ -1,4 +1,4 @@
-import type { SerumEvolution } from '../schemas'
+import type { SerumEvolution } from '../schemas/serum'
 
 const profileTone = {
   A: 'bg-success-soft text-success',
@@ -16,8 +16,52 @@ function Result({ output, value }: { output: 0 | 1; value: number }) {
   )
 }
 
-export function SerumProfile({ evolution }: { evolution: SerumEvolution }) {
+export function SerumGrid({ evolution }: { evolution: SerumEvolution }) {
   const headers = evolution.years[0]?.antigens ?? []
+
+  if (evolution.years.length === 0) {
+    return <p className="text-sm text-muted">Aucun prélèvement sérique pour ce patient.</p>
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full table-fixed text-left text-sm">
+        <thead className="bg-header text-xs text-muted">
+          <tr>
+            <th className="w-20 px-3 py-2 font-medium">Année</th>
+            {headers.map((antigen) => (
+              <th key={antigen.code} className="px-3 py-2 text-center font-medium">
+                {antigen.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {evolution.years.map((year) => (
+            <tr key={year.test_date} className="border-t border-line">
+              <th className="px-3 py-3 text-left font-medium">{year.year}</th>
+              {year.antigens.map((antigen) => (
+                <td key={antigen.code} className="px-3 py-3 text-center">
+                  <Result output={antigen.output} value={antigen.value} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+export function SerumLegend() {
+  return (
+    <p className="flex flex-wrap items-center gap-4 text-xs font-medium">
+      <span className="text-success">Négatif</span>
+      <span className="text-danger">Positif</span>
+    </p>
+  )
+}
+
+export function SerumProfile({ evolution }: { evolution: SerumEvolution }) {
   const tone = evolution.profile === null ? null : profileTone[evolution.profile]
 
   return (
@@ -43,41 +87,12 @@ export function SerumProfile({ evolution }: { evolution: SerumEvolution }) {
         ) : null}
       </header>
 
-      <p className="mt-4 flex flex-wrap items-center gap-4 text-xs font-medium">
-        <span className="text-success">Négatif</span>
-        <span className="text-danger">Positif</span>
-      </p>
-
-      {evolution.years.length === 0 ? (
-        <p className="mt-4 text-sm text-muted">Aucun prélèvement sérique pour ce patient.</p>
-      ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full table-fixed text-left text-sm">
-            <thead className="bg-header text-xs text-muted">
-              <tr>
-                <th className="w-20 px-3 py-2 font-medium">Année</th>
-                {headers.map((antigen) => (
-                  <th key={antigen.code} className="px-3 py-2 text-center font-medium">
-                    {antigen.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {evolution.years.map((year) => (
-                <tr key={year.test_date} className="border-t border-line">
-                  <th className="px-3 py-3 text-left font-medium">{year.year}</th>
-                  {year.antigens.map((antigen) => (
-                    <td key={antigen.code} className="px-3 py-3 text-center">
-                      <Result output={antigen.output} value={antigen.value} />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <div className="mt-4">
+        <SerumLegend />
+      </div>
+      <div className="mt-4">
+        <SerumGrid evolution={evolution} />
+      </div>
     </section>
   )
 }

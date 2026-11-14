@@ -4,10 +4,12 @@ export const POSTOP_DAY_OFFSET = 7
 export const CONSULTATION_DAY_OFFSET = 10
 export const RENAL_FOLLOW_UP_DAY_OFFSETS = [1, 3, 7] as const
 
+export const GENDERS = ['M', 'F'] as const
+
 export const GENDER_LABELS = {
   M: 'Homme',
   F: 'Femme',
-} as const
+} as const satisfies Record<(typeof GENDERS)[number], string>
 
 export const patientFileKeys = {
   all: ['patient-file'] as const,

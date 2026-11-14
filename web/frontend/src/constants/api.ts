@@ -4,6 +4,7 @@ export const API_V1_PREFIX = '/api/v1'
 
 export const API_ENDPOINTS = {
   login: `${API_V1_PREFIX}/auth/login`,
+  patients: `${API_V1_PREFIX}/patients`,
   patient: (id: string) => `${API_V1_PREFIX}/patients/${id}`,
   patientSynthetic: (id: string) => `${API_V1_PREFIX}/patients/${id}/synthetic-patients`,
 } as const

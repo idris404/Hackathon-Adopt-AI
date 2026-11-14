@@ -5,6 +5,7 @@ from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.analysis.router import router as analysis_router
 from app.auth.exceptions import InvalidCredentialsError
 from app.auth.router import router as auth_router
 from app.constants.auth import INVALID_CREDENTIALS_CODE
@@ -47,5 +48,6 @@ app.add_middleware(
 api_v1_router = APIRouter(prefix=API_V1_PREFIX)
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(users_router)
+api_v1_router.include_router(analysis_router)
 
 app.include_router(api_v1_router)

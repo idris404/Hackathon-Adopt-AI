@@ -31,6 +31,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from fastapi_users.db import BaseUserDatabase  # noqa: E402
 
 from app.auth.dependencies import get_access_token_db  # noqa: E402
+from app.constants.analysis import ANALYSIS_ROUTER_PREFIX  # noqa: E402
 from app.constants.auth import AUTH_ROUTER_PREFIX, PASSWORD_MIN_LENGTH  # noqa: E402
 from app.constants.http import API_V1_PREFIX  # noqa: E402
 from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
@@ -43,6 +44,7 @@ TEST_BASE_URL = "https://testserver"
 # URLs de l'API v1, construites comme main.py : version + préfixe du contexte.
 AUTH_URL = f"{API_V1_PREFIX}{AUTH_ROUTER_PREFIX}"
 USERS_URL = f"{API_V1_PREFIX}{USERS_ROUTER_PREFIX}"
+ANALYSIS_URL = f"{API_V1_PREFIX}{ANALYSIS_ROUTER_PREFIX}"
 
 
 @dataclass

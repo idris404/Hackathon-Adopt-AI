@@ -50,6 +50,10 @@ Dans ce fichier et dans `.claude/rules/`, les chemins `backend/…` et `frontend
 
 Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vivent sous `/api/<version>` (voir « Versionnement de l'API » dans `.claude/rules/backend.md`). La documentation OpenAPI reste à la racine : `/docs`, `/redoc`, `/openapi.json`.
 
+### Route publique : résultat d'analyse
+
+`GET /api/v1/analysis/result` ne demande **aucune authentification** (contexte `backend/app/analysis/`). C'est la seule exception à la règle « données de santé = accès authentifié », et elle ne tient que parce que la réponse est **synthétique** : le schéma `AnalysisResultRead` impose `synthetic: true` (`Literal[True]`) et le service sert pour l'instant le cas de démonstration `DEMO_ANALYSIS_RESULT` (`constants/analysis.py`). Les résultats d'un vrai patient ne doivent jamais passer par cette route : ils iront sur une route authentifiée, avec son propre schéma.
+
 ## Authentification
 
 Système **email / mot de passe**, implémenté côté backend FastAPI. Les skills Better Auth de `.claude/skills` (`create-auth`, `email-and-password-best-practices`, …) ciblent une stack TypeScript et ne s'appliquent pas ici.

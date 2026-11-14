@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
 from app.constants.pagination import (
     DEFAULT_PAGE,
@@ -12,6 +12,8 @@ from app.constants.pagination import (
     SortOrder,
 )
 from app.constants.patient_history import HistoryKind
+from app.constants.serum_tests import SerumProfile
+from app.serum_tests.evolution import build_serum_evolution
 from app.constants.patients import (
     CITY_MAX_LENGTH,
     COUNTRY_MAX_LENGTH,
@@ -40,7 +42,42 @@ class SerumTestRead(BaseModel):
     dr51_output: int
     dq10: int
     dq10_output: int
-    profile: str
+    profile: SerumProfile
+
+
+class AntigenPointRead(BaseModel):
+    """Un antigène d'un prélèvement. `output` vaut 1 si `value` atteint 500."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    code: str
+    label: str
+    value: int
+    output: int
+
+
+class SerumYearRead(BaseModel):
+    """Une année de suivi : les cinq antigènes du prélèvement."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    year: int
+    test_date: date
+    antigens: list[AntigenPointRead]
+
+
+class SerumEvolutionRead(BaseModel):
+    """Profil sérique du patient, prêt à afficher.
+
+    `profile` et `label` sont nuls sans prélèvement. `label` est le mot français
+    (« constant », « intermédiaire », « fluctuant »).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    profile: SerumProfile | None
+    label: str | None
+    years: list[SerumYearRead]
 
 
 class PatientHistoryRead(BaseModel):
@@ -63,7 +100,8 @@ class PatientRead(BaseModel):
     """Sortie : un patient, ses tests sériques et son historique d'événements.
 
     `id` est son UUID, `patient_id` son identifiant fonctionnel unique. `serum_tests` et
-    `history` sont vides quand rien n'a été seedé pour ce `patient_id`.
+    `history` sont vides quand rien n'a été seedé pour ce `patient_id`. `serum_evolution`
+    reprend les mêmes tests, rangés par année et par antigène, avec le libellé du profil.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -79,6 +117,11 @@ class PatientRead(BaseModel):
     created_at: datetime
     serum_tests: list[SerumTestRead] = []
     history: list[PatientHistoryRead] = []
+
+    @computed_field
+    @property
+    def serum_evolution(self) -> SerumEvolutionRead:
+        return SerumEvolutionRead.model_validate(build_serum_evolution(self.serum_tests))
 
 
 class PatientListQuery(BaseModel):

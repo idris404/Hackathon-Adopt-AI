@@ -23,6 +23,25 @@ const serumTestSchema = z.object({
   profile: z.string(),
 })
 
+const serumAntigenSchema = z.object({
+  code: z.string(),
+  label: z.string(),
+  value: z.number(),
+  output: z.union([z.literal(0), z.literal(1)]),
+})
+
+export const serumEvolutionSchema = z.object({
+  profile: z.enum(['A', 'B', 'C']).nullable(),
+  label: z.string().nullable(),
+  years: z.array(
+    z.object({
+      year: z.number().int(),
+      test_date: z.iso.date(),
+      antigens: z.array(serumAntigenSchema),
+    }),
+  ),
+})
+
 export const patientSchema = z.object({
   id: z.uuid(),
   patient_id: z.string(),
@@ -34,6 +53,7 @@ export const patientSchema = z.object({
   country: z.string(),
   created_at: z.string(),
   serum_tests: z.array(serumTestSchema),
+  serum_evolution: serumEvolutionSchema,
 })
 
 export const syntheticPatientSchema = z.object({
@@ -61,5 +81,6 @@ export const loginSchema = z.object({
 })
 
 export type PatientResponse = z.infer<typeof patientSchema>
+export type SerumEvolution = z.infer<typeof serumEvolutionSchema>
 export type SyntheticPatientResponse = z.infer<typeof syntheticPatientSchema>
 export type LoginValues = z.infer<typeof loginSchema>

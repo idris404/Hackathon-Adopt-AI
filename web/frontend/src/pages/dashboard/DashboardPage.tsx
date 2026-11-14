@@ -6,14 +6,6 @@ import { PAGE_SIZE_OPTIONS } from '../../constants/pagination'
 import { AppShell } from '../../shared/components/AppShell'
 import { usePatientList } from './hooks/usePatientList'
 
-function MockChip() {
-  return (
-    <span className="rounded bg-chip px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-muted">
-      Exemple fictif
-    </span>
-  )
-}
-
 function Kpi({
   label,
   value,
@@ -27,10 +19,7 @@ function Kpi({
 }) {
   return (
     <article className="rounded-xl border border-line bg-white p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm text-muted">{label}</p>
-        <MockChip />
-      </div>
+      <p className="text-sm text-muted">{label}</p>
       <p className="mt-2 text-3xl font-semibold">{value}</p>
       <p className={`mt-1 text-xs ${noteClass}`}>{note}</p>
     </article>
@@ -55,15 +44,12 @@ export function DashboardPage() {
               Centralisez le suivi et priorisez les dossiers qui nécessitent votre attention.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <MockChip />
-            <button
-              type="button"
-              className="rounded-lg bg-teal px-4 py-2 text-sm font-medium text-white"
-            >
-              Ajouter un patient
-            </button>
-          </div>
+          <button
+            type="button"
+            className="rounded-lg bg-teal px-4 py-2 text-sm font-medium text-white"
+          >
+            Ajouter un patient
+          </button>
         </div>
 
         <div className="grid gap-3 md:grid-cols-4">
@@ -99,15 +85,12 @@ export function DashboardPage() {
               <h2 className="text-base font-semibold">Liste des patients</h2>
               <span className="rounded-full bg-chip px-2 py-0.5 text-xs text-muted">{list.total}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <MockChip />
-              <button
-                type="button"
-                className="rounded-lg border border-button-line bg-white px-3 py-2 text-sm"
-              >
-                Exporter
-              </button>
-            </div>
+            <button
+              type="button"
+              className="rounded-lg border border-button-line bg-white px-3 py-2 text-sm"
+            >
+              Exporter
+            </button>
           </header>
 
           <div className="mt-4 flex shrink-0 flex-wrap items-center gap-2 px-5">
@@ -135,7 +118,6 @@ export function DashboardPage() {
               <option value="M">{GENDER_LABELS.M}</option>
             </select>
             <span className="flex items-center gap-2">
-              <MockChip />
               <select
                 aria-label="Type de suppléance"
                 disabled
@@ -248,7 +230,6 @@ export function DashboardPage() {
               <h2 className="text-base font-semibold">Validation</h2>
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-chip px-2 py-0.5 text-xs text-muted">{MOCK_KPI.toValidate}</span>
-                <MockChip />
               </div>
             </header>
             <p className="mt-2 text-sm text-muted">Les dossiers prêts pour votre revue médicale.</p>
@@ -274,7 +255,6 @@ export function DashboardPage() {
               <h2 className="text-base font-semibold">Résultats douteux</h2>
               <div className="flex items-center gap-2">
                 <span className="rounded-full bg-amber-soft px-2 py-0.5 text-xs text-amber">{MOCK_KPI.doubtful}</span>
-                <MockChip />
               </div>
             </header>
             <p className="mt-2 text-sm text-muted">Une interprétation biologique est nécessaire.</p>

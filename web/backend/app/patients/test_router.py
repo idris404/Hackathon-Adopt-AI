@@ -27,7 +27,7 @@ from app.patients.services import PatientService
 
 PATIENT_FIELDS = {
     "id", "patient_id", "firstname", "lastname", "birth", "gender", "city", "country",
-    "created_at", "serum_tests", "history",
+    "created_at", "serum_tests", "history", "serum_evolution",
 }  # fmt: skip
 PAGE_FIELDS = {"items", "total", "page", "page_size"}
 
@@ -190,6 +190,23 @@ def test_a_patient_includes_serum_tests_linked_by_patient_id(
             "profile": "C",
         }
     ]
+    assert body["serum_evolution"] == {
+        "profile": "C",
+        "label": "fluctuant",
+        "years": [
+            {
+                "year": 2017,
+                "test_date": "2017-12-09",
+                "antigens": [
+                    {"code": "b12", "label": "B12", "value": 175, "output": 0},
+                    {"code": "b13", "label": "B13", "value": 190, "output": 0},
+                    {"code": "dr53", "label": "DR53", "value": 291, "output": 0},
+                    {"code": "dr51", "label": "DR51", "value": 177, "output": 0},
+                    {"code": "dq10", "label": "DQ10", "value": 1870, "output": 1},
+                ],
+            }
+        ],
+    }
 
 
 def test_a_patient_includes_history_linked_by_patient_id(

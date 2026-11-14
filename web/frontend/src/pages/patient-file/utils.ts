@@ -28,6 +28,7 @@ import {
   patientSchema,
   syntheticPatientPageSchema,
   type PatientResponse,
+  type SerumEvolution,
   type SyntheticPatientResponse,
 } from './schemas'
 import { addDays, ageInYears, formatLongDate, formatShortDate, parseIsoDate } from '../../shared/utils/dates'
@@ -119,6 +120,7 @@ export type PatientFile = {
   postopDateLabel: string | null
   consultationDateLabel: string | null
   renalRows: RenalRow[]
+  serumEvolution: SerumEvolution
 }
 
 export function buildPatientFile(
@@ -176,6 +178,7 @@ export function buildPatientFile(
     preopDateLabel: preop === null ? null : formatLongDate(preop),
     postopDateLabel: postop === null ? null : formatLongDate(postop),
     consultationDateLabel: consultation === null ? null : formatLongDate(consultation),
+    serumEvolution: patient.serum_evolution,
     renalRows:
       graftDate === null
         ? []

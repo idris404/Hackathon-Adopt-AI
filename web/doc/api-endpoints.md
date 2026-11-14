@@ -141,6 +141,23 @@ L'historique vient de `data-model/data/serum_test_history.csv`. Ce sont des vale
 
 Les tests d'un patient sont triés par `test_date` croissante.
 
+### Objet `serum_evolution`
+
+Présent sur chaque `Patient`, calculé à partir de `serum_tests` (pas de requête supplémentaire). `profile` et `label` sont `null` sans prélèvement. Le libellé est celui du prélèvement le plus ancien.
+
+| Champ | Type | Remarque |
+| --- | --- | --- |
+| `profile` | `A` \| `B` \| `C` ou `null` | |
+| `label` | texte ou `null` | `constant` (A), `intermédiaire` (B), `fluctuant` (C) |
+| `years` | liste | Une entrée par prélèvement, dans l'ordre de `test_date` |
+| `years[].year` | entier | Année de `test_date` |
+| `years[].test_date` | date ISO | |
+| `years[].antigens` | liste | Toujours B12, B13, DR53, DR51, DQ10, dans cet ordre |
+| `years[].antigens[].code` | texte | Colonne (`b12`, …) |
+| `years[].antigens[].label` | texte | Nom affiché (`B12`, …) |
+| `years[].antigens[].value` | entier | Valeur simulée |
+| `years[].antigens[].output` | `0` \| `1` | `1` si la valeur est ≥ 500 |
+
 L'historique d'événements (`history`) n'est pas lu dans un CSV. Il est seedé pour dix patients de démonstration, dont les UUID listés sont ceux de `patients_synthetiques.id` (pas l'UUID d'URL). La liaison se fait par `patient_id` (`HIS-00055`, `SYN-0038`, `HIS-00355`, `HIS-00073`, `HIS-00407`, `SYN-0712`, `HIS-00584`, `HIS-00485`, `HIS-00047`, `HIS-00230`). Les textes sont des **exemples fictifs**, pas des données cliniques. Les dates sont calées sur la date de greffe du CSV. Les événements d'un patient sont triés par `occurred_on` croissante.
 
 ### Objet `PatientHistory`

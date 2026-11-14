@@ -74,6 +74,14 @@ Le frontend n'applique aucun filtre sur les tableaux : tout est fait ici.
 - Les services lèvent des **exceptions métier** définies dans `exceptions.py` du contexte (`UserAlreadyExistsError`, `InvalidCredentialsError`…), qui héritent d'une base commune dans `core/`.
 - Leur conversion en code HTTP (404, 409, 401…) se fait à un seul endroit : des exception handlers enregistrés dans `main.py`, pas des `try/except` dans chaque route.
 
+## Versionnement de l'API
+
+- Toutes les routes métier sont servies sous `/api/<version>` (`/api/v1/...`). Les préfixes sont des constantes de `constants/http.py` (`API_PREFIX`, `API_VERSION_V1`, `API_V1_PREFIX`).
+- Le router d'un contexte **ne porte pas la version** : il déclare seulement son préfixe de contexte (`/users`). C'est `main.py` qui le rattache à une version, via un `APIRouter(prefix=API_V1_PREFIX)`.
+- Ne jamais ajouter une route métier hors de ce préfixe : un test (`test_main.py`) échoue si une route documentée n'est pas sous `/api/v1/`. Seules la documentation (`/docs`, `/redoc`, `/openapi.json`) et d'éventuelles routes d'infrastructure (santé) restent à la racine ; ces dernières se déclarent avec `include_in_schema=False`, sinon le test les refuse.
+- Une version majeure (`v2`) se crée quand un contrat change de façon incompatible (champ retiré ou renommé, comportement modifié) : ajouter `API_VERSION_V2` / `API_V2_PREFIX`, un `api_v2_router` dans `main.py` et les routers ou schémas `v2` du contexte concerné. Les routes `v1` restent inchangées tant qu'elles sont supportées. Un ajout compatible (nouveau champ optionnel, nouvelle route) ne change pas la version.
+- Dans les tests, les URLs se construisent depuis ces constantes (`AUTH_URL`, `USERS_URL` dans `conftest.py`), jamais en littéral.
+
 ## Dépendances entre contextes
 
 - Un contexte n'importe pas le `repository` ni les détails internes d'un autre contexte. Il passe par son **service** (son API publique).

@@ -1,11 +1,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.auth.router import router as auth_router
-from app.constants.http import CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS
+from app.constants.http import API_V1_PREFIX, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS
 from app.core.config import get_settings
 from app.core.database import Base, engine
 from app.users.router import router as users_router
@@ -31,5 +31,9 @@ app.add_middleware(
     allow_headers=list(CORS_ALLOWED_HEADERS),
 )
 
-app.include_router(auth_router)
-app.include_router(users_router)
+# Les routers de contexte n'ont pas de préfixe de version : c'est ici qu'on les rattache à une version.
+api_v1_router = APIRouter(prefix=API_V1_PREFIX)
+api_v1_router.include_router(auth_router)
+api_v1_router.include_router(users_router)
+
+app.include_router(api_v1_router)

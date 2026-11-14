@@ -31,12 +31,18 @@ from fastapi.testclient import TestClient  # noqa: E402
 from fastapi_users.db import BaseUserDatabase  # noqa: E402
 
 from app.auth.dependencies import get_access_token_db  # noqa: E402
-from app.constants.auth import PASSWORD_MIN_LENGTH  # noqa: E402
+from app.constants.auth import AUTH_ROUTER_PREFIX, PASSWORD_MIN_LENGTH  # noqa: E402
+from app.constants.http import API_V1_PREFIX  # noqa: E402
+from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
 from app.main import app  # noqa: E402
 from app.users.dependencies import get_user_db  # noqa: E402
 
 # https : le cookie de session est `Secure`, le client de test ne le renvoie qu'en https.
 TEST_BASE_URL = "https://testserver"
+
+# URLs de l'API v1, construites comme main.py : version + préfixe du contexte.
+AUTH_URL = f"{API_V1_PREFIX}{AUTH_ROUTER_PREFIX}"
+USERS_URL = f"{API_V1_PREFIX}{USERS_ROUTER_PREFIX}"
 
 
 @dataclass
@@ -161,6 +167,6 @@ def credentials(valid_password: str) -> dict[str, str]:
 @pytest.fixture
 def registered_user(client: TestClient, credentials: dict[str, str]) -> dict[str, str]:
     """Un utilisateur inscrit via l'API (sans être connecté)."""
-    response = client.post("/auth/register", json=credentials)
+    response = client.post(f"{AUTH_URL}/register", json=credentials)
     assert response.status_code == 201
     return credentials

@@ -5,7 +5,7 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi_users.router.common import ErrorCode
 
-from app.conftest import FakeAccessTokenDatabase, FakeUserDatabase
+from app.conftest import AUTH_URL, USERS_URL, FakeAccessTokenDatabase, FakeUserDatabase
 from app.constants.auth import (
     PASSWORD_MAX_LENGTH,
     PASSWORD_MIN_LENGTH,
@@ -13,10 +13,10 @@ from app.constants.auth import (
     SESSION_LIFETIME_SECONDS,
 )
 
-REGISTER_URL = "/auth/register"
-LOGIN_URL = "/auth/login"
-LOGOUT_URL = "/auth/logout"
-ME_URL = "/users/me"
+REGISTER_URL = f"{AUTH_URL}/register"
+LOGIN_URL = f"{AUTH_URL}/login"
+LOGOUT_URL = f"{AUTH_URL}/logout"
+ME_URL = f"{USERS_URL}/me"
 
 PUBLIC_USER_FIELDS = {"id", "email", "is_active", "is_superuser", "is_verified"}
 

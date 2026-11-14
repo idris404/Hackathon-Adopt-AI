@@ -37,6 +37,10 @@ Dans ce fichier et dans `.claude/rules/`, les chemins `backend/…` et `frontend
 - La configuration (URL de connexion, secrets) passe par les variables d'environnement : `.env` n'est jamais commité, `.env.example` documente les variables attendues.
 - Le compose lit `DB_USER`, `DB_PASSWORD`, `DB_NAME` et `DB_PORT`, avec des valeurs par défaut pour le développement local. Docker Compose ne lit automatiquement que `dependencies/.env`, pas `web/.env` : pour utiliser `web/.env`, ajouter `--env-file web/.env` à la commande. Le backend doit se connecter avec les mêmes valeurs.
 
+## API
+
+Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vivent sous `/api/<version>` (voir « Versionnement de l'API » dans `.claude/rules/backend.md`). La documentation OpenAPI reste à la racine : `/docs`, `/redoc`, `/openapi.json`.
+
 ## Authentification
 
 Système **email / mot de passe**, implémenté côté backend FastAPI. Les skills Better Auth de `.claude/skills` (`create-auth`, `email-and-password-best-practices`, …) ciblent une stack TypeScript et ne s'appliquent pas ici.
@@ -45,7 +49,7 @@ Système **email / mot de passe**, implémenté côté backend FastAPI. Les skil
 - Le mot de passe n'est jamais stocké ni loggé en clair, ni renvoyé dans une réponse.
 - Bibliothèque : **FastAPI Users** (en mode maintenance : correctifs de sécurité seulement). Son adaptateur SQLAlchemy est **asynchrone** : l'auth utilise `AsyncSession` et `asyncpg`, ce qui déroge à l'exemple synchrone de `.claude/rules/backend.md`.
 - Session : jeton opaque **stocké en base** (table `accesstoken`), transporté par un cookie `HttpOnly` / `SameSite=lax`, `Secure` sauf `COOKIE_SECURE=false`. La déconnexion supprime la ligne : la session est révoquée côté serveur. Mots de passe hachés en **Argon2id** (paramètres dans `constants/auth.py`).
-- Routes : `POST /auth/register`, `POST /auth/login` (formulaire `username` = email + `password`), `POST /auth/logout`, `GET` et `PATCH /users/me`. Protéger une route : `Depends(current_active_user)` (`auth/dependencies.py`).
+- Routes (toutes sous `/api/v1`) : `POST /api/v1/auth/register`, `POST /api/v1/auth/login` (formulaire `username` = email + `password`), `POST /api/v1/auth/logout`, `GET` et `PATCH /api/v1/users/me`. Protéger une route : `Depends(current_active_user)` (`auth/dependencies.py`).
 - **Pas encore en place** (décisions à prendre) : réinitialisation de mot de passe et vérification d'email (fournisseur d'envoi d'email non choisi), limitation de débit, révocation des autres sessions au changement de mot de passe, migrations (les tables sont créées au démarrage dans `main.py`).
 
 ## Commandes

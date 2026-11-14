@@ -5,11 +5,12 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi_users.router.common import ErrorCode
 
-from app.conftest import FakeUser, FakeUserDatabase
+from app.conftest import AUTH_URL, USERS_URL, FakeUser, FakeUserDatabase
 from app.constants.auth import PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH
 
-ME_URL = "/users/me"
-LOGIN_URL = "/auth/login"
+ME_URL = f"{USERS_URL}/me"
+LOGIN_URL = f"{AUTH_URL}/login"
+REGISTER_URL = f"{AUTH_URL}/register"
 
 PUBLIC_USER_FIELDS = {"id", "email", "is_active", "is_superuser", "is_verified"}
 
@@ -87,8 +88,8 @@ def test_update_me_rejects_an_email_used_by_another_account(
     make_client: Callable[[], TestClient], valid_password: str
 ) -> None:
     alice, bob = make_client(), make_client()
-    alice.post("/auth/register", json={"email": "alice@example.com", "password": valid_password})
-    bob.post("/auth/register", json={"email": "bob@example.com", "password": valid_password})
+    alice.post(REGISTER_URL, json={"email": "alice@example.com", "password": valid_password})
+    bob.post(REGISTER_URL, json={"email": "bob@example.com", "password": valid_password})
     login(bob, "bob@example.com", valid_password)
 
     response = bob.patch(ME_URL, json={"email": "alice@example.com"})
@@ -112,7 +113,7 @@ def test_a_regular_user_cannot_read_another_account_by_id(
 ) -> None:
     other = next(iter(user_db.users.values()))
 
-    response = logged_in.get(f"/users/{other.id}")
+    response = logged_in.get(f"{USERS_URL}/{other.id}")
 
     assert response.status_code == 403
 
@@ -120,7 +121,7 @@ def test_a_regular_user_cannot_read_another_account_by_id(
 def test_a_regular_user_cannot_delete_an_account(
     logged_in: TestClient, user_db: FakeUserDatabase
 ) -> None:
-    response = logged_in.delete(f"/users/{uuid.uuid4()}")
+    response = logged_in.delete(f"{USERS_URL}/{uuid.uuid4()}")
 
     assert response.status_code == 403
     assert len(user_db.users) == 1
@@ -130,14 +131,14 @@ def test_a_superuser_can_read_another_account_by_id(
     make_client: Callable[[], TestClient], user_db: FakeUserDatabase, valid_password: str
 ) -> None:
     admin, member = make_client(), make_client()
-    admin.post("/auth/register", json={"email": "admin@example.com", "password": valid_password})
-    member.post("/auth/register", json={"email": "member@example.com", "password": valid_password})
+    admin.post(REGISTER_URL, json={"email": "admin@example.com", "password": valid_password})
+    member.post(REGISTER_URL, json={"email": "member@example.com", "password": valid_password})
     admin_user = find_user(user_db, "admin@example.com")
     admin_user.is_superuser = True
     login(admin, "admin@example.com", valid_password)
     member_id = find_user(user_db, "member@example.com").id
 
-    response = admin.get(f"/users/{member_id}")
+    response = admin.get(f"{USERS_URL}/{member_id}")
 
     assert response.status_code == 200
     assert response.json()["email"] == "member@example.com"

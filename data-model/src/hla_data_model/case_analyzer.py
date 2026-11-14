@@ -9,7 +9,7 @@ from .history_analyzer import analyze_history
 from .profile_analyzer import analyze_profile
 
 
-RULESET_VERSION = "DEMO-PARTIAL-0.2.0"
+RULESET_VERSION = "PROFILE-1.0.0"
 
 
 def _triggered_rules(profile: dict[str, Any], history: dict[str, Any]) -> list[str]:
@@ -27,7 +27,7 @@ def _uncertainties(profile: dict[str, Any], history: dict[str, Any]) -> list[str
     uncertainties: list[str] = []
     if profile["profile_score"] is None:
         uncertainties.append(
-            "Some active or unavailable profile factors have unvalidated contributions; the full score is unavailable."
+            "Some scoring inputs are missing, contradictory, or incomplete; the full profile score is unavailable."
         )
     if profile["missing_data"] or history["missing_data"]:
         uncertainties.append("Missing or contradictory source data prevents a favorable automated output.")
@@ -37,8 +37,11 @@ def _uncertainties(profile: dict[str, Any], history: dict[str, Any]) -> list[str
         uncertainties.append("A doubtful result has no automatic interpretation.")
     if history["discordances"]:
         uncertainties.append("No validated Immucor performance table covers the current discordance.")
-    if history["history_pattern"].endswith("_constant"):
-        uncertainties.append("The minimum duration and result count for a constant history are not validated.")
+    if history["history_pattern"].endswith("_constant") and history["history_pattern_status"] != "validated":
+        uncertainties.append(
+            "The history needs three prior analyses plus the current analysis over at least three years, "
+            "and the 50 percent MFI proximity rule cannot be evaluated without longitudinal MFI values."
+        )
     if history["history_pattern"] in {"evolving", "fluctuating"}:
         uncertainties.append(
             "No validated ordinal formula converts source categories into an increasing or decreasing trend."
@@ -57,7 +60,7 @@ def _is_simplified_review_candidate(profile: dict[str, Any], history: dict[str, 
         profile["proposed_risk_category"] == "minimal"
         and profile["category_status"] == "validated"
         and not profile["missing_data"]
-        and history["history_pattern"] == "negative_constant"
+        and history["history_pattern"].endswith("_constant")
         and history["history_pattern_status"] == "validated"
         and not history["missing_data"]
         and not history["discordances"]
@@ -67,9 +70,8 @@ def _is_simplified_review_candidate(profile: dict[str, Any], history: dict[str, 
 def analyze_case(source: dict[str, Any]) -> dict[str, Any]:
     """Build a full restitution from one validated synthetic source case.
 
-    This integration never computes a medical score and never emits an
-    autonomous validation. It only combines structured outputs from the two
-    pure analyzers.
+    This integration combines the versioned profile score and assay-history
+    description. It never emits an autonomous clinical validation.
     """
 
     profile = analyze_profile(source["patient_profile"])
@@ -82,6 +84,18 @@ def analyze_case(source: dict[str, Any]) -> dict[str, Any]:
         else "candidate_for_simplified_review"
         if simplified_review_candidate
         else "human_review_required"
+    )
+    category = profile["proposed_risk_category"]
+    review_route = (
+        "discordance_blocked"
+        if history["discordances"]
+        else "mandatory_professional_review_uncertain"
+        if category == "uncertain"
+        else "manual_biologist_review"
+        if category == "very_high"
+        else "simplified_review_candidate"
+        if simplified_review_candidate
+        else "supervised_full_dossier_review"
     )
 
     return {
@@ -96,6 +110,7 @@ def analyze_case(source: dict[str, Any]) -> dict[str, Any]:
         "trend": history["trend"],
         "discordances": history["discordances"],
         "review_status": review_status,
+        "review_route": review_route,
         "candidate_for_simplified_review": simplified_review_candidate,
         "triggered_rules": _triggered_rules(profile, history),
         "ruleset_version": RULESET_VERSION,

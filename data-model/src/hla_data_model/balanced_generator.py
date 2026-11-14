@@ -41,6 +41,10 @@ def _clean_profile(profile: dict[str, Any]) -> None:
     profile["diabetes"] = {"availability": "known", "value": False}
     profile["hypertension"] = {"availability": "known", "value": False}
     profile["autoimmune_disease"] = {"availability": "known", "value": False}
+    profile["initial_kidney_disease"] = {
+        "availability": "known",
+        "value": "Synthetic chronic kidney disease",
+    }
     profile["previous_transplants"] = {"availability": "known", "events": []}
     profile["car_t_treatments"] = {"availability": "known", "events": []}
     profile["therapeutic_antibody_treatments"] = {"availability": "known", "events": []}
@@ -52,6 +56,7 @@ def _set_profile_scenario(profile: dict[str, Any], scenario_type: str) -> None:
         profile["age"]["value"] = 66
     elif scenario_type == "medium_evolving":
         profile["pregnancy_history"].update({"status": "multiple", "count": 2})
+        profile["age"]["value"] = 66
     elif scenario_type == "high_doubtful_constant":
         profile["pregnancy_history"].update({"status": "multiple", "count": 2})
         profile["transfusion_history"].update({"count": 4, "frequency": "regular"})
@@ -59,6 +64,7 @@ def _set_profile_scenario(profile: dict[str, Any], scenario_type: str) -> None:
         profile["age"]["value"] = 66
         profile["pregnancy_history"].update({"status": "multiple", "count": 2})
         profile["transfusion_history"].update({"count": 4, "frequency": "regular"})
+        profile["diabetes"]["value"] = True
     elif scenario_type == "incomplete_missing_result":
         profile["age"] = {"availability": "missing", "value": None}
     elif scenario_type == "unresolved_profile_positive_constant":

@@ -50,11 +50,11 @@ class BalancedGeneratorTests(unittest.TestCase):
                 report["profile"]["risk_categories"],
                 {
                     "minimal": 30,
-                    "moderate": 10,
+                    "moderate": 20,
                     "medium": 15,
                     "high": 10,
                     "very_high": 10,
-                    "uncertain": 25,
+                    "uncertain": 15,
                 },
             )
             self.assertEqual(

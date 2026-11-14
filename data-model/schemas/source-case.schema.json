@@ -31,6 +31,7 @@
         "diabetes",
         "hypertension",
         "autoimmune_disease",
+        "initial_kidney_disease",
         "dialysis",
         "rejection_suspicion",
         "organ_context",
@@ -74,6 +75,15 @@
         "diabetes": {"$ref": "#/$defs/nullableBooleanObservation"},
         "hypertension": {"$ref": "#/$defs/nullableBooleanObservation"},
         "autoimmune_disease": {"$ref": "#/$defs/nullableBooleanObservation"},
+        "initial_kidney_disease": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["availability", "value"],
+          "properties": {
+            "availability": {"$ref": "#/$defs/availability"},
+            "value": {"type": ["string", "null"]}
+          }
+        },
         "dialysis": {
           "type": "object",
           "additionalProperties": false,
@@ -111,7 +121,8 @@
           "required": ["availability", "events"],
           "properties": {
             "availability": {"$ref": "#/$defs/availability"},
-            "events": {"type": "array", "items": {"type": "object"}}
+            "events": {"type": "array", "items": {"type": "object"}},
+            "rejection_history": {"enum": ["yes", "no", "unknown", "not_applicable"]}
           }
         },
         "car_t_treatments": {
@@ -185,7 +196,7 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1", "profile-csv-importer-v2", "profile-history-generator-v1"]},
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1", "profile-csv-importer-v2", "profile-csv-importer-v3", "profile-history-generator-v1"]},
         "simulation_scenario": {"type": "string", "minLength": 1},
         "source_dataset": {"type": "string", "minLength": 1},
         "source_patient_id": {"type": "string", "minLength": 1},

@@ -7,10 +7,10 @@ Twin hackathon demonstrator. All records are synthetic and deterministic.
 
 - The source cases never contain real patient data.
 - A missing value is never converted to a negative result or to zero.
-- Medical weights, thresholds, history interpretation, and discordance
-  arbitration remain `pending_review` until a healthcare professional validates them.
-- The current validator checks structure and safety invariants only. It does not
-  compute a medical score.
+- Patient-profile weights and category thresholds are versioned in
+  `protocols/ruleset-profile-1.0.0.json`.
+- Quantitative assay proximity, directional trends, and discordance arbitration
+  remain `pending_review`.
 - Every expected restitution requires human validation.
 
 ## Layout
@@ -34,6 +34,11 @@ data-model/
 │   │   ├── profile-source-cases.jsonl.gz
 │   │   ├── profile-outcomes.jsonl.gz
 │   │   └── profile-import-report.json
+│   ├── profile-v3/
+│   │   ├── profile-source-cases.jsonl.gz
+│   │   ├── profile-scores.jsonl.gz
+│   │   ├── profile-outcomes.jsonl.gz
+│   │   └── profile-import-report.json
 │   ├── raw/
 │   │   └── patients_synthetiques_v2.csv.gz
 │   └── scenarios/
@@ -47,7 +52,8 @@ data-model/
 │           └── expected-restitution.json
 ├── protocols/
 │   ├── ruleset-pending-review.json
-│   └── ruleset-partial-0.2.0.json
+│   ├── ruleset-partial-0.2.0.json
+│   └── ruleset-profile-1.0.0.json
 ├── schemas/
 │   ├── profile-outcome.schema.json
 │   ├── source-case.schema.json
@@ -62,6 +68,7 @@ data-model/
 │   ├── profile_analyzer.py
 │   ├── profile_csv_importer.py
 │   ├── profile_csv_v2_importer.py
+│   ├── profile_csv_v3_importer.py
 │   ├── profile_history_generator.py
 │   └── validator.py
 └── tests/
@@ -165,6 +172,21 @@ truth columns and injected-anomaly labels are excluded from patient inputs.
 No patient score is generated until the healthcare-professional scoring rules
 are received and versioned.
 
+Import and score the corrected v3 profile dataset:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.profile_csv_v3_importer \
+  --input data/raw/patients_synthetiques_v3.csv.gz \
+  --sources data/profile-v3/profile-source-cases.jsonl.gz \
+  --profiles data/profile-v3/profile-scores.jsonl.gz \
+  --outcomes data/profile-v3/profile-outcomes.jsonl.gz \
+  --report data/profile-v3/profile-import-report.json
+```
+
+The v3 importer calculates only `PROFILE-1.0.0`. It excludes every `_verite_*`
+column and `_anomalies_injectees` from patient inputs, and keeps future outcome
+labels in a separate file.
+
 Attach deterministic longitudinal assay histories to the imported profiles,
 then compute the integrated restitutions:
 
@@ -201,35 +223,36 @@ interpretation:
 - CAR-T treatments and therapeutic-antibody treatments as separate histories.
 - optional source HLA and detailed profile facts as non-scored context.
 
-Sex, dialysis, rejection suspicion, and organ context are copied into the
-restitution as non-scored context. They cannot silently affect the profile
-score. Pregnancy, CAR-T, and therapeutic-antibody rules remain `pending_review`.
+Sex, dialysis, and organ context are copied as non-scored context. Rejection
+suspicion is preserved in context and also scored explicitly as PF-10.
 
 ## Profile analyzer
 
-`profile_analyzer.py` now builds the complete profile restitution from source
-facts. PF-01 (age), PF-02 (pregnancy), and PF-07 (transfusion) use the rules
-validated by a healthcare professional. A full score and category are emitted only when every other
-factor is explicitly absent; an active, missing, or contradictory factor whose
-weight is unresolved keeps the full score null and the category `uncertain`.
-The validated partial score remains visible in both cases.
+`profile_analyzer.py` calculates eleven explicit factors from age, pregnancy,
+diabetes, hypertension, autoimmune disease, previous transplants and rejection
+history, transfusions, CAR-T, antibody treatment, rejection suspicion, and the
+initial chronic kidney disease. The
+category bands are 0–1 minimal, 2–3 moderate, 4–5 medium, 6–7 high, and 8+
+very high. A missing or contradictory scoring criterion makes the category
+`uncertain`; the available partial score remains visible.
 
 ## History analyzer
 
 `history_analyzer.py` preserves every source result, identifies the latest
 serum, exposes missing results and same-serum discordances, and describes
-constant, evolving, fluctuating, or indeterminate histories. It emits `stable`
-only for repeated identical source categories. It never emits `increasing` or
-`decreasing` without a validated ordinal or quantitative rule.
+constant, evolving, fluctuating, or indeterminate histories. A categorical
+constant pattern needs three prior analyses plus the current analysis spanning
+at least three years. Qualification remains pending until histories expose the
+MFI value needed to verify that each relative gap is at most 50%. It never
+emits `increasing` or `decreasing` without a validated quantitative rule.
 
 ## Case integration
 
-`case_analyzer.py` combines the profile and history outputs into the complete
-restitution contract. With the pending ruleset it can emit only
-`human_review_required` or `blocked` while the exact negative-constant history
-definition remains pending. The simplified-review route is encoded but cannot
-activate until that history definition is validated, and it will always retain
-human confirmation.
+`case_analyzer.py` exposes an explicit route for simplified-review candidates,
+supervised full-dossier review, mandatory manual biologist review, uncertain
+profiles, and unresolved discordance. A simplified-review candidate still
+retains `human_validation_required=true`; this demonstrator never emits a final
+autonomous clinical validation.
 
 The project has no runtime dependency outside the Python standard library.
 
@@ -240,7 +263,8 @@ The project has no runtime dependency outside the Python standard library.
 - `synthetic` and `human_validation_required` are always `true`;
 - source-result absence remains explicit and distinct from `negative`;
 - an incomplete factor appears in the restitution's `missing_data` list;
-- no simplified-review candidate is emitted while the ruleset is unvalidated;
+- simplified-review candidates require a minimal profile and a qualified
+  non-discordant history with three prior analyses plus the current one;
 - source inputs do not contain derived scores or risk categories;
 - current source results are preserved before history pattern and trend;
 - discordant results from one serum remain unresolved;
@@ -248,12 +272,11 @@ The project has no runtime dependency outside the Python standard library.
 
 ## Deferred decisions
 
-The following inputs are unresolved and must not receive invented weights:
+The following inputs remain unresolved and must not receive invented rules:
 
-- diabetes, hypertension, and autoimmune disease;
-- previous transplantation;
-- CAR-T and other antibody-based treatments;
-- the definition of regular transfusion;
-- totals above six;
-- minimum duration and result count for a constant negative history;
+- the source field for chronic diseases other than the explicit initial kidney
+  disease, diabetes, hypertension, and autoimmune fields;
+- the longitudinal MFI field and unit used by the validated 50% proximity threshold;
+- the behavior of that relative comparison when the preceding value is zero;
+- increasing or decreasing quantitative assay trends;
 - any Immucor performance table used to arbitrate discordance.

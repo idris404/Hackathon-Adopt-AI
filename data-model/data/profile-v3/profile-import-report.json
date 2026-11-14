@@ -1,0 +1,83 @@
+{
+  "applied_defaults": {
+    "unknown_previous_transplant_as_none": 1993,
+    "unknown_rejection_history_as_none": 3108
+  },
+  "applied_normalizations": {
+    "previous_transplant_after_reference_date": 483,
+    "transfusion_regular_with_single_event": 470
+  },
+  "detected_contradictions": {
+    "dialysis_before_birth": 359,
+    "pregnancy_dates_with_zero_count": 165,
+    "previous_transplant_after_reference_date": 483,
+    "transfusion_regular_with_single_event": 470
+  },
+  "excluded_by_reason": {
+    "unsupported_organ:Rein-Pancréas": 987
+  },
+  "excluded_records": 987,
+  "generation_metadata_columns_excluded": [
+    "_anomalies_injectees"
+  ],
+  "generation_truth_columns_excluded": [
+    "_verite_groupe",
+    "_verite_tgi",
+    "_verite_interdits",
+    "_verite_dsa",
+    "_verite_mfi_dsa_max",
+    "_verite_p_rejet",
+    "_verite_p_rejet_donneur_quelconque",
+    "_verite_risque_reference"
+  ],
+  "imported_records": 50013,
+  "importer_version": "profile-csv-importer-v3",
+  "input_content_sha256": "553d6e47885cd56ee6db2cf8c59c0a8305c1c1b1cfbcbccea682b32752358efb",
+  "input_file": "patients_synthetiques_v3.csv.gz",
+  "outcome_statuses": {
+    "not_applicable": 679,
+    "observed": 49316,
+    "ongoing": 18
+  },
+  "outputs": {
+    "outcomes": {
+      "compression": "gzip",
+      "content_sha256": "3f7fbdfcb904898d5b4c9ff5730d134675f07b003a40fcf1174e0493885e79d3",
+      "file": "profile-outcomes.jsonl.gz"
+    },
+    "profiles": {
+      "compression": "gzip",
+      "content_sha256": "c8374d9c6c4eb4dca98d7f225c162aa0efe4192833ec16d41a79fb0ea7cb27df",
+      "file": "profile-scores.jsonl.gz"
+    },
+    "sources": {
+      "compression": "gzip",
+      "content_sha256": "d59c5017a571c0ff9c7c295a76504b1214c8b758fabff90b6f64692bc63e3770",
+      "file": "profile-source-cases.jsonl.gz"
+    }
+  },
+  "profile_categories": {
+    "high": 5180,
+    "medium": 12786,
+    "minimal": 913,
+    "moderate": 14566,
+    "uncertain": 7834,
+    "very_high": 8734
+  },
+  "profile_score_statuses": {
+    "calculated": 42179,
+    "partially_calculated": 7834
+  },
+  "profile_scores_generated": true,
+  "ruleset_version": "PROFILE-1.0.0",
+  "source_dataset": "patients_synthetiques-v3",
+  "source_partitions": {
+    "actuel": 980,
+    "historique": 49033
+  },
+  "total_records": 51000,
+  "unresolved_source_inconsistencies": {
+    "dialysis_before_birth": 359,
+    "pregnancy_dates_with_zero_count": 165
+  }
+}

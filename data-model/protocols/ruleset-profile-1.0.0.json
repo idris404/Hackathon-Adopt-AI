@@ -1,0 +1,41 @@
+{
+  "ruleset_version": "PROFILE-1.0.0",
+  "review_state": "validated_for_synthetic_demonstrator",
+  "validated_by_role": "healthcare_professional",
+  "validated_at": "2026-11-14",
+  "scope": "Deterministic synthetic patient-profile scoring for the hackathon demonstrator.",
+  "factor_rules": [
+    {"rule_id": "PF-01", "description": "Age strictly above 65 contributes 1 point."},
+    {"rule_id": "PF-02", "description": "Pregnancy count contributes 0, 1, or 2 points for zero, one, or at least two pregnancies."},
+    {"rule_id": "PF-03", "description": "Diabetes contributes 1 point when present."},
+    {"rule_id": "PF-04", "description": "Hypertension contributes 1 point when present."},
+    {"rule_id": "CHRONIC-DISEASE", "description": "Each recorded chronic disease other than autoimmune disease contributes 1 point; autoimmune disease follows PF-05 instead."},
+    {"rule_id": "PF-05", "description": "Autoimmune disease contributes 2 points when present."},
+    {"rule_id": "PF-06", "description": "Each previous transplant contributes 3 points; any prior rejection history adds 1 point."},
+    {"rule_id": "PF-07", "description": "Transfusion count contributes 0, 1, 2, or 3 points for zero, one, two, or at least three transfusions."},
+    {"rule_id": "PF-08", "description": "CAR-T, another atypical cellular treatment, or antibody-based treatment contributes 1 combined point when any is present."},
+    {"rule_id": "PF-09", "description": "Antibody-based treatment is preserved as a separate source attribute but shares the PF-08 one-point cap."},
+    {"rule_id": "PF-10", "description": "Rejection suspicion contributes 8 points when present."},
+    {"rule_id": "PF-11", "description": "The recorded initial chronic kidney disease contributes 1 point."}
+  ],
+  "category_rules": [
+    {"category": "minimal", "minimum": 0, "maximum": 1},
+    {"category": "moderate", "minimum": 2, "maximum": 3},
+    {"category": "medium", "minimum": 4, "maximum": 5},
+    {"category": "high", "minimum": 6, "maximum": 7},
+    {"category": "very_high", "minimum": 8, "maximum": null}
+  ],
+  "missing_data_rule": "A missing or contradictory scoring criterion produces an uncertain category and mandatory professional review.",
+  "history_rule": "A qualified constant history requires three prior analyses plus the current analysis, spanning at least three years, with no discordance and each MFI value differing by no more than 50 percent from the preceding MFI value.",
+  "review_routes": {
+    "minimal_with_qualified_constant_history": "simplified_review_candidate",
+    "moderate_medium_or_high": "supervised_full_dossier_review",
+    "very_high": "manual_biologist_review",
+    "uncertain": "mandatory_professional_review_uncertain"
+  },
+  "safety_boundary": "Every result remains decision support and requires explicit human confirmation; no autonomous clinical validation is emitted.",
+  "pending_review": [
+    "The v3 CSV has explicit initial kidney disease, diabetes, and hypertension fields but no general other-chronic-diseases field. A source field is required before additional chronic diseases can be scored.",
+    "The assay history contract currently has categorical results only. A real MFI history field and the behavior when the preceding MFI is zero are still required before the 50 percent proximity rule can be computed. The generation-only _verite_mfi_dsa_max column is not an analysis input."
+  ]
+}

@@ -12,10 +12,11 @@
     "diabetes": {"availability": "known", "value": false},
     "hypertension": {"availability": "known", "value": true},
     "autoimmune_disease": {"availability": "known", "value": false},
+    "initial_kidney_disease": {"availability": "known", "value": "Synthetic chronic kidney disease"},
     "dialysis": {"availability": "known", "status": "not_on_dialysis", "started_at": null},
     "rejection_suspicion": {"availability": "known", "value": false, "observed_at": "2026-11-13T09:00:00Z"},
     "organ_context": {"availability": "known", "target_organ": "kidney", "status": "follow_up", "registration_date": "2018-05-22"},
-    "previous_transplants": {"availability": "known", "events": [{"organ": "kidney", "date": "2019-06-20"}]},
+    "previous_transplants": {"availability": "known", "events": [{"organ": "kidney", "date": "2019-06-20"}], "rejection_history": "no"},
     "car_t_treatments": {"availability": "known", "events": []},
     "therapeutic_antibody_treatments": {"availability": "known", "events": []}
   },

@@ -3,47 +3,173 @@
   "synthetic": true,
   "phase": "pre_transplant",
   "profile": {
-    "profile_score": 0,
-    "validated_partial_score": 0,
+    "profile_score": 1,
+    "validated_partial_score": 1,
     "score_status": "calculated",
     "proposed_risk_category": "minimal",
     "category_status": "validated",
     "context": {
-      "sex_at_birth": {"availability": "known", "value": "male"},
-      "dialysis": {"availability": "known", "status": "on_dialysis", "started_at": "2023-08-14"},
-      "rejection_suspicion": {"availability": "not_applicable", "value": null, "observed_at": null},
-      "organ_context": {"availability": "known", "target_organ": "kidney", "status": "waiting_list", "registration_date": "2024-02-11"}
+      "sex_at_birth": {
+        "availability": "known",
+        "value": "male"
+      },
+      "dialysis": {
+        "availability": "known",
+        "status": "on_dialysis",
+        "started_at": "2023-08-14"
+      },
+      "rejection_suspicion": {
+        "availability": "not_applicable",
+        "value": null,
+        "observed_at": null
+      },
+      "organ_context": {
+        "availability": "known",
+        "target_organ": "kidney",
+        "status": "waiting_list",
+        "registration_date": "2024-02-11"
+      }
     },
     "factors": [
-      {"factor_id": "PF-01", "availability": "known", "source_value": 48, "contribution": 0, "rule_status": "validated", "justification": "Validated rule: age strictly above 65 contributes one point."},
-      {"factor_id": "PF-02", "availability": "known", "source_value": 0, "contribution": 0, "rule_status": "validated", "justification": "Validated rule: zero, one, or multiple pregnancies contribute zero, one, or two points."},
-      {"factor_id": "PF-03", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Diabetes is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-04", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Hypertension is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-05", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Autoimmune disease is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-06", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "Previous transplant is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-07", "availability": "known", "source_value": {"count": 0, "frequency": "none"}, "contribution": 0, "rule_status": "validated", "justification": "Validated rule: zero, one, multiple, or explicitly regular transfusions contribute zero to three points."},
-      {"factor_id": "PF-08", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "CAR-T treatment is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-09", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "Therapeutic antibody treatment is absent; no unresolved positive contribution applies."}
+      {
+        "factor_id": "PF-01",
+        "availability": "known",
+        "source_value": 48,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: age strictly above 65 contributes one point."
+      },
+      {
+        "factor_id": "PF-02",
+        "availability": "known",
+        "source_value": 0,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: zero, one, or multiple pregnancies contribute zero, one, or two points."
+      },
+      {
+        "factor_id": "PF-03",
+        "availability": "known",
+        "source_value": false,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: diabetes contributes one point when present."
+      },
+      {
+        "factor_id": "PF-04",
+        "availability": "known",
+        "source_value": false,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: hypertension contributes one point when present."
+      },
+      {
+        "factor_id": "PF-05",
+        "availability": "known",
+        "source_value": false,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: autoimmune disease contributes two points when present."
+      },
+      {
+        "factor_id": "PF-06",
+        "availability": "known",
+        "source_value": {
+          "events": [],
+          "rejection_history": "not_applicable"
+        },
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: each previous transplant contributes three points and a rejection history adds one point."
+      },
+      {
+        "factor_id": "PF-07",
+        "availability": "known",
+        "source_value": {
+          "count": 0,
+          "frequency": "none"
+        },
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: zero, one, two, or at least three transfusions contribute zero to three points."
+      },
+      {
+        "factor_id": "PF-08",
+        "availability": "known",
+        "source_value": [],
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: antibody-based or atypical treatment contributes one combined point when present."
+      },
+      {
+        "factor_id": "PF-09",
+        "availability": "known",
+        "source_value": [],
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: antibody-based treatment shares the one-point cap with atypical treatment."
+      },
+      {
+        "factor_id": "PF-10",
+        "availability": "not_applicable",
+        "source_value": null,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: a rejection suspicion contributes eight points."
+      },
+      {
+        "factor_id": "PF-11",
+        "availability": "known",
+        "source_value": "Synthetic chronic kidney disease",
+        "contribution": 1,
+        "rule_status": "validated",
+        "justification": "Validated rule: the recorded initial chronic kidney disease contributes one point."
+      }
     ],
     "missing_data": []
   },
   "assays": [
-    {"assay_id": "ASSAY-005", "serum_id": "SER-004", "source_result": "doubtful", "result_availability": "present"},
-    {"assay_id": "ASSAY-006", "serum_id": "SER-005", "source_result": "doubtful", "result_availability": "present"}
+    {
+      "assay_id": "ASSAY-005",
+      "serum_id": "SER-004",
+      "source_result": "doubtful",
+      "result_availability": "present"
+    },
+    {
+      "assay_id": "ASSAY-006",
+      "serum_id": "SER-005",
+      "source_result": "doubtful",
+      "result_availability": "present"
+    }
   ],
-  "current_result_summary": {"serum_id": "SER-005", "current_source_results": ["doubtful"], "current_result": "doubtful", "status": "source_consistent"},
+  "current_result_summary": {
+    "serum_id": "SER-005",
+    "current_source_results": [
+      "doubtful"
+    ],
+    "current_result": "doubtful",
+    "status": "source_consistent"
+  },
   "history_pattern": "doubtful_constant",
   "history_pattern_status": "pending_review",
   "trend": "stable",
   "discordances": [],
   "review_status": "human_review_required",
+  "review_route": "supervised_full_dossier_review",
   "candidate_for_simplified_review": false,
-  "triggered_rules": ["SAFE-002", "SAFE-003", "SAFE-004"],
-  "ruleset_version": "DEMO-PARTIAL-0.2.0",
+  "triggered_rules": [
+    "SAFE-002",
+    "SAFE-003",
+    "SAFE-004"
+  ],
+  "ruleset_version": "PROFILE-1.0.0",
   "uncertainties": [
     "A doubtful result has no automatic interpretation.",
-    "The minimum duration and result count for a constant history are not validated."
+    "The history needs three prior analyses plus the current analysis over at least three years, and the 50 percent MFI proximity rule cannot be evaluated without longitudinal MFI values."
   ],
   "human_validation_required": true,
-  "provenance": {"source_record_copied": false, "generator_version": "manual-fixture-v1"}
+  "provenance": {
+    "source_record_copied": false,
+    "generator_version": "manual-fixture-v1"
+  }
 }

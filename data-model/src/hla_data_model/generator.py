@@ -119,6 +119,10 @@ def generate_source_cases(count: int, seed: int = DEFAULT_SEED) -> list[dict[str
                     "diabetes": _boolean_observation(rng),
                     "hypertension": _boolean_observation(rng),
                     "autoimmune_disease": _boolean_observation(rng),
+                    "initial_kidney_disease": {
+                        "availability": "known",
+                        "value": "Synthetic chronic kidney disease",
+                    },
                     "dialysis": {
                         "availability": "known",
                         "status": dialysis_status,

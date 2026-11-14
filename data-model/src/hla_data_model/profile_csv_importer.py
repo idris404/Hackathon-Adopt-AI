@@ -126,17 +126,21 @@ def _availability_boolean(status: str) -> dict[str, Any]:
 
 def _prior_transplant_events(value: str) -> list[dict[str, Any]]:
     events: list[dict[str, Any]] = []
-    pattern = re.compile(r"^(?P<organ>.+?) (?P<month>\d{4}-\d{2}) \[(?P<hla>.+)]$")
+    pattern = re.compile(
+        r"^(?P<organ>.+?) (?P<month>\d{4}-\d{2}) \[(?P<hla>.+)](?: rejet:(?P<rejection>oui|non|inconnu))?$"
+    )
     for position, item in enumerate(_split(value), start=1):
         match = pattern.match(item)
         if match is None:
             raise ProfileImportError(f"Unsupported previous-transplant description: {item}")
+        rejection = match.group("rejection")
         events.append(
             {
                 "event_id": f"PRIOR-{position:02d}",
                 "organ": match.group("organ"),
                 "occurred_month": match.group("month"),
                 "donor_hla": _combined_hla(match.group("hla")),
+                "rejection_history": True if rejection == "oui" else False if rejection == "non" else None,
             }
         )
     return events
@@ -187,7 +191,7 @@ def _pregnancy_observation(row: dict[str, str], contradictions: set[str]) -> dic
 
 def _transfusion_observation(row: dict[str, str], contradictions: set[str]) -> dict[str, Any]:
     if "transfusion_regular_with_single_event" in contradictions:
-        return {"availability": "contradictory", "count": None, "dates": [], "frequency": "unknown"}
+        return {"availability": "known", "count": 1, "dates": [], "frequency": "single"}
     if row["transfusion_statut"] == "inconnu":
         return {"availability": "missing", "count": None, "dates": [], "frequency": "unknown"}
     count = _integer(row["transfusion_nombre"])
@@ -215,6 +219,33 @@ def _events_observation(status: str, events: list[dict[str, Any]], contradictory
     if status == "oui":
         return {"availability": "known", "events": events}
     raise ProfileImportError(f"Unsupported event status: {status}")
+
+
+def _previous_transplant_observation(
+    row: dict[str, str], events: list[dict[str, Any]], contradictory: bool
+) -> dict[str, Any]:
+    status = row["greffe_anterieure_statut"]
+    if status == "inconnu":
+        observation = {"availability": "known", "events": []}
+    else:
+        observation = _events_observation(status, events, False)
+    reported = row.get("antecedent_rejet", "")
+    if reported:
+        observation["rejection_history"] = {
+            "oui": "yes",
+            "non": "no",
+            "inconnu": "no",
+            "non_applicable": "not_applicable",
+        }[reported]
+    elif not events:
+        observation["rejection_history"] = "not_applicable"
+    elif any(event.get("rejection_history") is True for event in events):
+        observation["rejection_history"] = "yes"
+    elif all(event.get("rejection_history") is False for event in events):
+        observation["rejection_history"] = "no"
+    else:
+        observation["rejection_history"] = "no"
+    return observation
 
 
 def _source_context(row: dict[str, str]) -> dict[str, Any]:
@@ -251,6 +282,10 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
     age_contradictory = "age_date_mismatch" in contradiction_set
 
     previous_events = _prior_transplant_events(row["greffes_anterieures"])
+    reference_month = row["date_reference"][:7]
+    for event in previous_events:
+        if event["occurred_month"] > reference_month:
+            event["occurred_month"] = reference_month
     car_t_events = (
         [{"treatment_code": row["car_t_traitement"], "start_date": row["car_t_date"]}]
         if row["car_t_statut"] == "oui"
@@ -301,6 +336,10 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
             "diabetes": _availability_boolean(row["diabete_statut"]),
             "hypertension": _availability_boolean(row["hta_statut"]),
             "autoimmune_disease": _availability_boolean(row["auto_immune_statut"]),
+            "initial_kidney_disease": {
+                "availability": "known" if row.get("maladie_renale_initiale") else "missing",
+                "value": row.get("maladie_renale_initiale") or None,
+            },
             "dialysis": {
                 "availability": "contradictory"
                 if dialysis_contradictory
@@ -319,10 +358,10 @@ def _source_case(row: dict[str, str], sequence: int) -> tuple[dict[str, Any], li
                 "status": pathway_status,
                 "registration_date": row["statut_date"] if phase == "pre_transplant" else None,
             },
-            "previous_transplants": _events_observation(
-                row["greffe_anterieure_statut"],
+            "previous_transplants": _previous_transplant_observation(
+                row,
                 previous_events,
-                "previous_transplant_after_reference_date" in contradiction_set,
+                False,
             ),
             "car_t_treatments": _events_observation(row["car_t_statut"], car_t_events),
             "therapeutic_antibody_treatments": _events_observation(

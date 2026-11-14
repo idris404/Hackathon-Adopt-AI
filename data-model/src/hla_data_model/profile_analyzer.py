@@ -1,4 +1,4 @@
-"""Build an explainable patient-profile restitution without medical scoring."""
+"""Build an explainable patient-profile score from versioned synthetic inputs."""
 
 from __future__ import annotations
 
@@ -61,38 +61,46 @@ FACTOR_DEFINITIONS = (
         _count("pregnancy_history"),
     ),
     FactorDefinition(
-        "PF-03", "diabetes", "Diabetes", "blocked", "Diabetes contribution is undefined.", _scalar("diabetes")
+        "PF-03",
+        "diabetes",
+        "Diabetes",
+        "validated",
+        "Validated rule: diabetes contributes one point when present.",
+        _scalar("diabetes"),
     ),
     FactorDefinition(
         "PF-04",
         "hypertension",
         "Hypertension",
-        "blocked",
-        "Hypertension contribution is undefined.",
+        "validated",
+        "Validated rule: hypertension contributes one point when present.",
         _scalar("hypertension"),
     ),
     FactorDefinition(
         "PF-05",
         "autoimmune_disease",
         "Autoimmune disease",
-        "blocked",
-        "Autoimmune disease contribution is undefined.",
+        "validated",
+        "Validated rule: autoimmune disease contributes two points when present.",
         _scalar("autoimmune_disease"),
     ),
     FactorDefinition(
         "PF-06",
         "previous_transplants",
         "Previous transplant",
-        "blocked",
-        "Previous transplant contribution is undefined.",
-        _events("previous_transplants"),
+        "validated",
+        "Validated rule: each previous transplant contributes three points and a rejection history adds one point.",
+        lambda profile: {
+            "events": deepcopy(profile["previous_transplants"].get("events", [])),
+            "rejection_history": profile["previous_transplants"].get("rejection_history", "not_applicable"),
+        },
     ),
     FactorDefinition(
         "PF-07",
         "transfusion_history",
         "Transfusion history",
         "validated",
-        "Validated rule: zero, one, multiple, or explicitly regular transfusions contribute zero to three points.",
+        "Validated rule: zero, one, two, or at least three transfusions contribute zero to three points.",
         lambda profile: {
             "count": profile["transfusion_history"].get("count"),
             "frequency": profile["transfusion_history"].get("frequency"),
@@ -101,18 +109,34 @@ FACTOR_DEFINITIONS = (
     FactorDefinition(
         "PF-08",
         "car_t_treatments",
-        "CAR-T treatment",
-        "blocked",
-        "CAR-T contribution is undefined.",
+        "Antibody-based or atypical treatment",
+        "validated",
+        "Validated rule: antibody-based or atypical treatment contributes one combined point when present.",
         _events("car_t_treatments"),
     ),
     FactorDefinition(
         "PF-09",
         "therapeutic_antibody_treatments",
         "Therapeutic antibody treatment",
-        "blocked",
-        "Other antibody-based treatment contribution is undefined.",
+        "validated",
+        "Validated rule: antibody-based treatment shares the one-point cap with atypical treatment.",
         _events("therapeutic_antibody_treatments"),
+    ),
+    FactorDefinition(
+        "PF-10",
+        "rejection_suspicion",
+        "Rejection suspicion",
+        "validated",
+        "Validated rule: a rejection suspicion contributes eight points.",
+        _scalar("rejection_suspicion"),
+    ),
+    FactorDefinition(
+        "PF-11",
+        "initial_kidney_disease",
+        "Initial kidney disease",
+        "validated",
+        "Validated rule: the recorded initial chronic kidney disease contributes one point.",
+        _scalar("initial_kidney_disease"),
     ),
 )
 
@@ -143,40 +167,66 @@ def _validated_contribution(
     definition: FactorDefinition,
     observation: dict[str, Any],
     source_value: Any,
+    patient_profile: dict[str, Any],
 ) -> int | None:
-    if observation.get("availability") != "known":
-        return None
-    if definition.rule_status != "validated":
-        if source_value is False or source_value == []:
-            return 0
+    availability = observation.get("availability")
+    if availability not in {"known", "not_applicable"}:
         return None
     if definition.factor_id == "PF-01":
-        return 1 if isinstance(source_value, int) and source_value > 65 else 0
+        if not isinstance(source_value, int) or source_value < 0:
+            return None
+        return 1 if source_value > 65 else 0
     if definition.factor_id == "PF-02":
-        if not isinstance(source_value, int):
+        if not isinstance(source_value, int) or source_value < 0:
             return None
         return 0 if source_value == 0 else 1 if source_value == 1 else 2
     if definition.factor_id == "PF-07":
-        frequency = source_value.get("frequency")
         count = source_value.get("count")
-        if frequency == "regular":
-            return 3
-        if not isinstance(count, int) or frequency == "unknown":
+        if not isinstance(count, int) or count < 0:
             return None
-        return 0 if count == 0 else 1 if count == 1 else 2
+        return min(count, 3)
+    if definition.factor_id in {"PF-03", "PF-04"}:
+        return 1 if source_value is True else 0 if source_value is False else None
+    if definition.factor_id == "PF-05":
+        return 2 if source_value is True else 0 if source_value is False else None
+    if definition.factor_id == "PF-06":
+        events = source_value.get("events")
+        rejection_history = source_value.get("rejection_history")
+        if not isinstance(events, list):
+            return None
+        if not events:
+            return 0
+        if rejection_history not in {"yes", "no"}:
+            return None
+        return 3 * len(events) + (1 if rejection_history == "yes" else 0)
+    if definition.factor_id == "PF-08":
+        return 1 if source_value else 0 if isinstance(source_value, list) else None
+    if definition.factor_id == "PF-09":
+        if not isinstance(source_value, list):
+            return None
+        car_t_events = patient_profile["car_t_treatments"].get("events", [])
+        return 0 if car_t_events else 1 if source_value else 0
+    if definition.factor_id == "PF-10":
+        if availability == "not_applicable":
+            return 0
+        return 8 if source_value is True else 0 if source_value is False else None
+    if definition.factor_id == "PF-11":
+        if availability == "not_applicable":
+            return 0
+        return 1 if isinstance(source_value, str) and source_value.strip() else None
     return None
 
 
 def _risk_category(profile_score: int | None) -> tuple[str, str]:
-    if profile_score is None or profile_score > 6:
+    if profile_score is None:
         return "uncertain", "pending_review"
-    if profile_score == 0:
+    if profile_score < 2:
         return "minimal", "validated"
-    if profile_score == 1:
+    if profile_score < 4:
         return "moderate", "validated"
-    if profile_score <= 4:
+    if profile_score < 6:
         return "medium", "validated"
-    if profile_score == 5:
+    if profile_score < 8:
         return "high", "validated"
     return "very_high", "validated"
 
@@ -192,7 +242,7 @@ def _require_profile_fields(patient_profile: dict[str, Any]) -> None:
 
 
 def analyze_profile(patient_profile: dict[str, Any]) -> dict[str, Any]:
-    """Return a structured profile without computing an unvalidated score."""
+    """Return a structured profile using the versioned validated factor rules."""
 
     _require_profile_fields(patient_profile)
     context = {name: deepcopy(patient_profile[name]) for name in PROFILE_CONTEXT_FIELDS}
@@ -210,10 +260,8 @@ def analyze_profile(patient_profile: dict[str, Any]) -> dict[str, Any]:
         observation = patient_profile[definition.source_field]
         availability = observation.get("availability")
         source_value = definition.value_reader(patient_profile)
-        contribution = _validated_contribution(definition, observation, source_value)
+        contribution = _validated_contribution(definition, observation, source_value, patient_profile)
         justification = _factor_justification(definition, availability)
-        if definition.rule_status != "validated" and contribution == 0:
-            justification = f"{definition.label} is absent; no unresolved positive contribution applies."
         factors.append(
             {
                 "factor_id": definition.factor_id,
@@ -232,32 +280,37 @@ def analyze_profile(patient_profile: dict[str, Any]) -> dict[str, Any]:
                     "impact": "prevents_favorable_output",
                 }
             )
+        elif contribution is None:
+            missing_data.append(
+                {
+                    "path": f"patient_profile.{definition.source_field}",
+                    "reason": f"{definition.label} is incomplete for the validated scoring rule.",
+                    "impact": "prevents_favorable_output",
+                }
+            )
 
     for context_name in PROFILE_CONTEXT_FIELDS:
         observation = patient_profile[context_name]
         availability = observation.get("availability")
-        if availability in UNAVAILABLE_STATES:
+        path = f"patient_profile.{context_name}"
+        if availability in UNAVAILABLE_STATES and not any(item["path"] == path for item in missing_data):
             label = context_name.replace("_", " ").capitalize()
             missing_data.append(
                 {
-                    "path": f"patient_profile.{context_name}",
+                    "path": path,
                     "reason": _missing_reason(context_name, label, availability),
                     "impact": "prevents_favorable_output",
                 }
             )
 
     validated_partial_score = sum(
-        factor["contribution"]
-        for factor in factors
-        if factor["rule_status"] == "validated" and isinstance(factor["contribution"], int)
+        factor["contribution"] for factor in factors if isinstance(factor["contribution"], int)
     )
     profile_score = (
         sum(factor["contribution"] for factor in factors)
         if all(isinstance(factor["contribution"], int) for factor in factors)
         else None
     )
-    if missing_data:
-        profile_score = None
     proposed_risk_category, category_status = _risk_category(profile_score)
     return {
         "profile_score": profile_score,

@@ -7,6 +7,14 @@ from typing import Any
 
 
 SOURCE_RESULTS = {"negative", "positive", "doubtful"}
+MINIMUM_CONSTANT_HISTORY_RESULTS = 4
+
+
+def _three_year_anniversary(value: datetime) -> datetime:
+    try:
+        return value.replace(year=value.year + 3)
+    except ValueError:
+        return value.replace(year=value.year + 3, day=28)
 
 
 class HistoryAnalysisError(ValueError):
@@ -165,6 +173,7 @@ def analyze_history(serums: list[dict[str, Any]]) -> dict[str, Any]:
     latest_serum = ordered_serums[-1]
     latest_results, latest_result, latest_status = _serum_state(latest_serum)
     history_pattern, trend = _classify_history(ordered_serums)
+    history_pattern_status = "pending_review"
     return {
         "assays": assays_projection,
         "current_result_summary": {
@@ -174,7 +183,7 @@ def analyze_history(serums: list[dict[str, Any]]) -> dict[str, Any]:
             "status": latest_status,
         },
         "history_pattern": history_pattern,
-        "history_pattern_status": "pending_review",
+        "history_pattern_status": history_pattern_status,
         "trend": trend,
         "discordances": discordances,
         "missing_data": missing_data,

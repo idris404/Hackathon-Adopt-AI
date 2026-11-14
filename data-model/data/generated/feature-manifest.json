@@ -9,7 +9,8 @@
     "history_pattern",
     "review_route",
     "ruleset_version",
-    "post_evaluation_data"
+    "post_evaluation_data",
+    "patient_profile.source_context"
   ],
   "feature_columns": [
     "phase",
@@ -50,11 +51,11 @@
   "files": {
     "features": {
       "name": "model-features.csv",
-      "sha256": "39e41252e5197ee209416114a870a4a71480700d56e40a8a365a99cf7a5626b9"
+      "sha256": "3a88cec671f91034532e54a9ef81274f3a463a178dff693632dfdc0c81a350ce"
     },
     "labels": {
       "name": "simulation-labels.csv",
-      "sha256": "73ce3926662f821958525c6d2088b192e095517da1f5c76fe99581eb7223c827"
+      "sha256": "f8a1e26cecfbcac03bcc915a62df2cf45ed26ae01c92f7a3cc435ad693f78812"
     },
     "splits": {
       "name": "dataset-splits.csv",

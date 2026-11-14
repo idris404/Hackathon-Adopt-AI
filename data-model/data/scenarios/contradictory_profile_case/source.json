@@ -19,6 +19,7 @@
       ]
     },
     "autoimmune_disease": {"availability": "known", "value": false},
+    "initial_kidney_disease": {"availability": "known", "value": "Synthetic chronic kidney disease"},
     "dialysis": {"availability": "known", "status": "not_on_dialysis", "started_at": null},
     "rejection_suspicion": {"availability": "known", "value": true, "observed_at": "2026-11-09T15:00:00Z"},
     "organ_context": {"availability": "known", "target_organ": "kidney", "status": "follow_up", "registration_date": "2022-02-18"},

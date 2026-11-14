@@ -64,12 +64,24 @@ class CaseAnalyzerTests(unittest.TestCase):
     def test_non_minimal_calculable_profile_requires_human_review(self) -> None:
         source, _ = load_scenario("complete_case")
         modified = deepcopy(source)
-        modified["patient_profile"]["age"]["value"] = 66
+        modified["patient_profile"]["pregnancy_history"].update({"status": "multiple", "count": 2})
         result = analyze_case(modified)
-        self.assertEqual(result["profile"]["profile_score"], 1)
+        self.assertEqual(result["profile"]["profile_score"], 3)
         self.assertEqual(result["profile"]["proposed_risk_category"], "moderate")
         self.assertEqual(result["review_status"], "human_review_required")
         self.assertFalse(result["candidate_for_simplified_review"])
+
+    def test_very_high_profile_routes_to_manual_biologist_review(self) -> None:
+        source, _ = load_scenario("complete_case")
+        modified = deepcopy(source)
+        modified["patient_profile"]["rejection_suspicion"] = {
+            "availability": "known",
+            "value": True,
+            "observed_at": "2025-02-01T00:00:00Z",
+        }
+        result = analyze_case(modified)
+        self.assertEqual(result["profile"]["proposed_risk_category"], "very_high")
+        self.assertEqual(result["review_route"], "manual_biologist_review")
 
     def test_minimal_negative_pattern_waits_for_exact_history_definition(self) -> None:
         source, _ = load_scenario("complete_case")
@@ -79,6 +91,33 @@ class CaseAnalyzerTests(unittest.TestCase):
         self.assertEqual(result["history_pattern_status"], "pending_review")
         self.assertEqual(result["review_status"], "human_review_required")
         self.assertFalse(result["candidate_for_simplified_review"])
+
+    def test_four_categorical_results_wait_for_numeric_proximity_before_simplified_review(self) -> None:
+        source, _ = load_scenario("complete_case")
+        modified = deepcopy(source)
+        template = modified["serums"][0]
+        modified["serums"] = []
+        for index, collected_at in enumerate(
+            (
+                "2020-01-01T00:00:00Z",
+                "2021-01-01T00:00:00Z",
+                "2022-01-01T00:00:00Z",
+                "2023-01-01T00:00:00Z",
+            ),
+            start=1,
+        ):
+            serum = deepcopy(template)
+            serum["serum_id"] = f"QUAL-{index}"
+            serum["collected_at"] = collected_at
+            for assay_index, assay in enumerate(serum["assays"], start=1):
+                assay["assay_id"] = f"QUAL-{index}-{assay_index}"
+                assay["source_result"] = "negative"
+                assay["result_availability"] = "present"
+            modified["serums"].append(serum)
+        result = analyze_case(modified)
+        self.assertFalse(result["candidate_for_simplified_review"])
+        self.assertEqual(result["review_route"], "supervised_full_dossier_review")
+        self.assertTrue(result["human_validation_required"])
 
 
 if __name__ == "__main__":

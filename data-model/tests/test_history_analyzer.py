@@ -91,6 +91,54 @@ class HistoryAnalyzerTests(unittest.TestCase):
             self.assertIn(result["trend"], {"stable", "indeterminate"})
             self.assertNotIn(result["trend"], {"increasing", "decreasing"})
 
+    def test_four_constant_categorical_analyses_wait_for_numeric_proximity(self) -> None:
+        source, _ = load_scenario("complete_case")
+        template = source["serums"][0]
+        serums = []
+        for index, collected_at in enumerate(
+            (
+                "2020-01-01T00:00:00Z",
+                "2021-01-01T00:00:00Z",
+                "2022-01-01T00:00:00Z",
+                "2023-01-01T00:00:00Z",
+            ),
+            start=1,
+        ):
+            serum = deepcopy(template)
+            serum["serum_id"] = f"QUAL-{index}"
+            serum["collected_at"] = collected_at
+            for assay_index, assay in enumerate(serum["assays"], start=1):
+                assay["assay_id"] = f"QUAL-{index}-{assay_index}"
+                assay["source_result"] = "negative"
+                assay["result_availability"] = "present"
+            serums.append(serum)
+        result = analyze_history(serums)
+        self.assertEqual(result["history_pattern"], "negative_constant")
+        self.assertEqual(result["history_pattern_status"], "pending_review")
+
+    def test_four_constant_analyses_under_three_years_remain_pending(self) -> None:
+        source, _ = load_scenario("complete_case")
+        template = source["serums"][0]
+        serums = []
+        for index, collected_at in enumerate(
+            (
+                "2020-01-01T00:00:00Z",
+                "2021-01-01T00:00:00Z",
+                "2022-01-01T00:00:00Z",
+                "2022-12-31T00:00:00Z",
+            ),
+            start=1,
+        ):
+            serum = deepcopy(template)
+            serum["serum_id"] = f"SHORT-{index}"
+            serum["collected_at"] = collected_at
+            for assay_index, assay in enumerate(serum["assays"], start=1):
+                assay["assay_id"] = f"SHORT-{index}-{assay_index}"
+            serums.append(serum)
+        result = analyze_history(serums)
+        self.assertEqual(result["history_pattern"], "negative_constant")
+        self.assertEqual(result["history_pattern_status"], "pending_review")
+
 
 if __name__ == "__main__":
     unittest.main()

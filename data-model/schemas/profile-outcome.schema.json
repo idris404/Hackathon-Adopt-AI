@@ -36,8 +36,8 @@
       ],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"const": "profile-csv-importer-v2"},
-        "source_dataset": {"const": "patients_synthetiques-v2"},
+        "generator_version": {"enum": ["profile-csv-importer-v2", "profile-csv-importer-v3"]},
+        "source_dataset": {"enum": ["patients_synthetiques-v2", "patients_synthetiques-v3"]},
         "source_patient_id": {"type": "string", "minLength": 1},
         "source_partition": {"enum": ["historique", "actuel"]}
       }

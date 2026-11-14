@@ -16,6 +16,7 @@
     "trend",
     "discordances",
     "review_status",
+    "review_route",
     "candidate_for_simplified_review",
     "triggered_rules",
     "ruleset_version",
@@ -127,9 +128,18 @@
     "trend": {"enum": ["increasing", "decreasing", "stable", "indeterminate"]},
     "discordances": {"type": "array", "items": {"type": "object"}},
     "review_status": {"enum": ["human_review_required", "candidate_for_simplified_review", "blocked"]},
+    "review_route": {
+      "enum": [
+        "simplified_review_candidate",
+        "supervised_full_dossier_review",
+        "manual_biologist_review",
+        "mandatory_professional_review_uncertain",
+        "discordance_blocked"
+      ]
+    },
     "candidate_for_simplified_review": {"type": "boolean"},
     "triggered_rules": {"type": "array", "items": {"type": "string"}},
-    "ruleset_version": {"const": "DEMO-PARTIAL-0.2.0"},
+    "ruleset_version": {"const": "PROFILE-1.0.0"},
     "uncertainties": {"type": "array", "items": {"type": "string"}},
     "human_validation_required": {"const": true},
     "provenance": {
@@ -138,7 +148,7 @@
       "required": ["source_record_copied", "generator_version"],
       "properties": {
         "source_record_copied": {"const": false},
-        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1", "profile-csv-importer-v2", "profile-history-generator-v1"]},
+        "generator_version": {"enum": ["manual-fixture-v1", "deterministic-generator-v1", "balanced-generator-v1", "profile-csv-importer-v1", "profile-csv-importer-v2", "profile-csv-importer-v3", "profile-history-generator-v1"]},
         "simulation_scenario": {"type": "string", "minLength": 1},
         "source_dataset": {"type": "string", "minLength": 1},
         "source_patient_id": {"type": "string", "minLength": 1},

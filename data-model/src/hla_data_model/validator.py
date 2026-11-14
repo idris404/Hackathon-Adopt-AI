@@ -13,8 +13,8 @@ from .case_analyzer import analyze_case
 from .history_analyzer import HistoryAnalysisError, analyze_history
 
 
-RULESET_VERSION = "DEMO-PARTIAL-0.2.0"
-VALIDATED_FACTOR_IDS = {"PF-01", "PF-02", "PF-07"}
+RULESET_VERSION = "PROFILE-1.0.0"
+VALIDATED_FACTOR_IDS = {f"PF-{index:02d}" for index in range(1, 12)}
 SOURCE_RESULTS = {"negative", "positive", "doubtful"}
 PHASES = {"pre_transplant", "post_transplant"}
 PROFILE_PATHS = {
@@ -27,6 +27,8 @@ PROFILE_PATHS = {
     "PF-07": "transfusion_history",
     "PF-08": "car_t_treatments",
     "PF-09": "therapeutic_antibody_treatments",
+    "PF-10": "rejection_suspicion",
+    "PF-11": "initial_kidney_disease",
 }
 PROFILE_CONTEXT_PATHS = ("sex_at_birth", "dialysis", "rejection_suspicion", "organ_context")
 OPTIONAL_PROFILE_CONTEXT_PATHS = ("source_context",)
@@ -196,6 +198,7 @@ def _validate_source(source: dict[str, Any], errors: list[str]) -> dict[str, dic
                 "diabetes",
                 "hypertension",
                 "autoimmune_disease",
+                "initial_kidney_disease",
                 "dialysis",
                 "rejection_suspicion",
                 "organ_context",
@@ -299,6 +302,7 @@ def _validate_restitution(
             "trend",
             "discordances",
             "review_status",
+            "review_route",
             "candidate_for_simplified_review",
             "triggered_rules",
             "ruleset_version",
@@ -364,8 +368,6 @@ def _validate_restitution(
             if factor_id in VALIDATED_FACTOR_IDS:
                 if factor.get("rule_status") != "validated":
                     errors.append(f"{factor_path}.rule_status: must be validated")
-                if factor.get("availability") == "known" and factor.get("contribution") is None:
-                    errors.append(f"{factor_path}.contribution: required for an available validated factor")
             elif factor.get("contribution") not in {None, 0}:
                 errors.append(f"{factor_path}.contribution: unvalidated active factors cannot receive points")
 
@@ -477,8 +479,8 @@ def _validate_restitution(
     )
     if restitution.get("history_pattern") == "negative_constant" and not all_assays_negative:
         errors.append("restitution.history_pattern: negative_constant requires every available assay to be present and negative")
-    if restitution.get("history_pattern_status") != "pending_review":
-        errors.append("restitution.history_pattern_status: must remain pending_review")
+    if restitution.get("history_pattern_status") not in {"pending_review", "validated"}:
+        errors.append("restitution.history_pattern_status: invalid value")
 
     try:
         analyzed_history = analyze_history(source.get("serums", []))

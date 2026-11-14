@@ -4,34 +4,153 @@
   "phase": "post_transplant",
   "profile": {
     "profile_score": null,
-    "validated_partial_score": 3,
+    "validated_partial_score": 8,
     "score_status": "partially_calculated",
     "proposed_risk_category": "uncertain",
     "category_status": "pending_review",
     "context": {
-      "sex_at_birth": {"availability": "known", "value": "female"},
-      "dialysis": {"availability": "known", "status": "not_on_dialysis", "started_at": null},
-      "rejection_suspicion": {"availability": "known", "value": false, "observed_at": "2026-11-13T09:00:00Z"},
-      "organ_context": {"availability": "known", "target_organ": "kidney", "status": "follow_up", "registration_date": "2018-05-22"}
+      "sex_at_birth": {
+        "availability": "known",
+        "value": "female"
+      },
+      "dialysis": {
+        "availability": "known",
+        "status": "not_on_dialysis",
+        "started_at": null
+      },
+      "rejection_suspicion": {
+        "availability": "known",
+        "value": false,
+        "observed_at": "2026-11-13T09:00:00Z"
+      },
+      "organ_context": {
+        "availability": "known",
+        "target_organ": "kidney",
+        "status": "follow_up",
+        "registration_date": "2018-05-22"
+      }
     },
     "factors": [
-      {"factor_id": "PF-01", "availability": "missing", "source_value": null, "contribution": null, "rule_status": "validated", "justification": "Age is missing and must not be interpreted as zero."},
-      {"factor_id": "PF-02", "availability": "known", "source_value": 1, "contribution": 1, "rule_status": "validated", "justification": "Validated rule: zero, one, or multiple pregnancies contribute zero, one, or two points."},
-      {"factor_id": "PF-03", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Diabetes is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-04", "availability": "known", "source_value": true, "contribution": null, "rule_status": "blocked", "justification": "Hypertension contribution is undefined."},
-      {"factor_id": "PF-05", "availability": "known", "source_value": false, "contribution": 0, "rule_status": "blocked", "justification": "Autoimmune disease is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-06", "availability": "known", "source_value": [{"organ": "kidney", "date": "2019-06-20"}], "contribution": null, "rule_status": "blocked", "justification": "Previous transplant contribution is undefined."},
-      {"factor_id": "PF-07", "availability": "known", "source_value": {"count": 2, "frequency": "multiple"}, "contribution": 2, "rule_status": "validated", "justification": "Validated rule: zero, one, multiple, or explicitly regular transfusions contribute zero to three points."},
-      {"factor_id": "PF-08", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "CAR-T treatment is absent; no unresolved positive contribution applies."},
-      {"factor_id": "PF-09", "availability": "known", "source_value": [], "contribution": 0, "rule_status": "blocked", "justification": "Therapeutic antibody treatment is absent; no unresolved positive contribution applies."}
+      {
+        "factor_id": "PF-01",
+        "availability": "missing",
+        "source_value": null,
+        "contribution": null,
+        "rule_status": "validated",
+        "justification": "Age is missing and must not be interpreted as zero."
+      },
+      {
+        "factor_id": "PF-02",
+        "availability": "known",
+        "source_value": 1,
+        "contribution": 1,
+        "rule_status": "validated",
+        "justification": "Validated rule: zero, one, or multiple pregnancies contribute zero, one, or two points."
+      },
+      {
+        "factor_id": "PF-03",
+        "availability": "known",
+        "source_value": false,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: diabetes contributes one point when present."
+      },
+      {
+        "factor_id": "PF-04",
+        "availability": "known",
+        "source_value": true,
+        "contribution": 1,
+        "rule_status": "validated",
+        "justification": "Validated rule: hypertension contributes one point when present."
+      },
+      {
+        "factor_id": "PF-05",
+        "availability": "known",
+        "source_value": false,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: autoimmune disease contributes two points when present."
+      },
+      {
+        "factor_id": "PF-06",
+        "availability": "known",
+        "source_value": {
+          "events": [
+            {
+              "organ": "kidney",
+              "date": "2019-06-20"
+            }
+          ],
+          "rejection_history": "no"
+        },
+        "contribution": 3,
+        "rule_status": "validated",
+        "justification": "Validated rule: each previous transplant contributes three points and a rejection history adds one point."
+      },
+      {
+        "factor_id": "PF-07",
+        "availability": "known",
+        "source_value": {
+          "count": 2,
+          "frequency": "multiple"
+        },
+        "contribution": 2,
+        "rule_status": "validated",
+        "justification": "Validated rule: zero, one, two, or at least three transfusions contribute zero to three points."
+      },
+      {
+        "factor_id": "PF-08",
+        "availability": "known",
+        "source_value": [],
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: antibody-based or atypical treatment contributes one combined point when present."
+      },
+      {
+        "factor_id": "PF-09",
+        "availability": "known",
+        "source_value": [],
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: antibody-based treatment shares the one-point cap with atypical treatment."
+      },
+      {
+        "factor_id": "PF-10",
+        "availability": "known",
+        "source_value": false,
+        "contribution": 0,
+        "rule_status": "validated",
+        "justification": "Validated rule: a rejection suspicion contributes eight points."
+      },
+      {
+        "factor_id": "PF-11",
+        "availability": "known",
+        "source_value": "Synthetic chronic kidney disease",
+        "contribution": 1,
+        "rule_status": "validated",
+        "justification": "Validated rule: the recorded initial chronic kidney disease contributes one point."
+      }
     ],
     "missing_data": [
-      {"path": "patient_profile.age", "reason": "Age is absent from the source record.", "impact": "prevents_favorable_output"},
-      {"path": "serums.SER-003.assays.ASSAY-004.source_result", "reason": "The assay result is absent.", "impact": "prevents_favorable_output"}
+      {
+        "path": "patient_profile.age",
+        "reason": "Age is absent from the source record.",
+        "impact": "prevents_favorable_output"
+      },
+      {
+        "path": "serums.SER-003.assays.ASSAY-004.source_result",
+        "reason": "The assay result is absent.",
+        "impact": "prevents_favorable_output"
+      }
     ]
   },
   "assays": [
-    {"assay_id": "ASSAY-004", "serum_id": "SER-003", "source_result": null, "result_availability": "missing"}
+    {
+      "assay_id": "ASSAY-004",
+      "serum_id": "SER-003",
+      "source_result": null,
+      "result_availability": "missing"
+    }
   ],
   "current_result_summary": {
     "serum_id": "SER-003",
@@ -44,13 +163,22 @@
   "trend": "indeterminate",
   "discordances": [],
   "review_status": "human_review_required",
+  "review_route": "mandatory_professional_review_uncertain",
   "candidate_for_simplified_review": false,
-  "triggered_rules": ["SAFE-001", "SAFE-002", "SAFE-003", "SAFE-004"],
-  "ruleset_version": "DEMO-PARTIAL-0.2.0",
+  "triggered_rules": [
+    "SAFE-001",
+    "SAFE-002",
+    "SAFE-003",
+    "SAFE-004"
+  ],
+  "ruleset_version": "PROFILE-1.0.0",
   "uncertainties": [
-    "Some active or unavailable profile factors have unvalidated contributions; the full score is unavailable.",
+    "Some scoring inputs are missing, contradictory, or incomplete; the full profile score is unavailable.",
     "Missing or contradictory source data prevents a favorable automated output."
   ],
   "human_validation_required": true,
-  "provenance": {"source_record_copied": false, "generator_version": "manual-fixture-v1"}
+  "provenance": {
+    "source_record_copied": false,
+    "generator_version": "manual-fixture-v1"
+  }
 }

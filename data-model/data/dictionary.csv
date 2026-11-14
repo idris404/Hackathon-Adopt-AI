@@ -11,19 +11,21 @@ patient_profile.pregnancy_history.status,source,enum,true,none|one|multiple|unkn
 patient_profile.pregnancy_history.count,source,integer|null,true,non-negative,Source pregnancy count,pending_review
 patient_profile.transfusion_history.count,source,integer|null,true,non-negative,Source transfusion count,pending_review
 patient_profile.transfusion_history.frequency,source,enum|null,true,none|single|multiple|regular|unknown,Source frequency; regular is not yet defined,pending_review
-patient_profile.diabetes.value,source,boolean|null,true,true|false|null,Source diabetes state; no weight is defined,pending_review
-patient_profile.hypertension.value,source,boolean|null,true,true|false|null,Source hypertension state; no weight is defined,pending_review
-patient_profile.autoimmune_disease.value,source,boolean|null,true,true|false|null,Source autoimmune disease state; no weight is defined,pending_review
+patient_profile.diabetes.value,source,boolean|null,true,true|false|null,Source diabetes state; present contributes one point,validated
+patient_profile.hypertension.value,source,boolean|null,true,true|false|null,Source hypertension state; present contributes one point,validated
+patient_profile.autoimmune_disease.value,source,boolean|null,true,true|false|null,Source autoimmune disease state; present contributes two points,validated
+patient_profile.initial_kidney_disease.value,source,string|null,true,synthetic disease category|null,Recorded initial chronic kidney disease contributes one point,validated
 patient_profile.dialysis.status,source,enum,true,not_on_dialysis|on_dialysis|unknown,Source dialysis state without risk interpretation,pending_review
 patient_profile.dialysis.started_at,source,date|null,true,ISO 8601 date|null,Known dialysis start date when applicable,pending_review
-patient_profile.rejection_suspicion.value,source,boolean|null,true,true|false|null,Source suspicion flag; not a diagnosis,pending_review
+patient_profile.rejection_suspicion.value,source,boolean|null,true,true|false|null,Source suspicion flag; present contributes eight points but is not a diagnosis,validated
 patient_profile.rejection_suspicion.observed_at,source,datetime|null,true,ISO 8601|null,Timestamp attached to the source suspicion flag,pending_review
 patient_profile.organ_context.target_organ,source,enum,true,kidney,Target organ for the demonstrator,validated_functional
 patient_profile.organ_context.status,source,enum,true,waiting_list|suspended|transplanted|follow_up|unknown,Source organ workflow status without eligibility inference,pending_review
 patient_profile.organ_context.registration_date,source,date|null,true,ISO 8601 date|null,Source registration date,pending_review
-patient_profile.previous_transplants.events,source,array,true,synthetic events,Prior transplant source facts; no weight is defined,pending_review
-patient_profile.car_t_treatments.events,source,array,true,synthetic events,CAR-T source facts; no weight is defined,pending_review
-patient_profile.therapeutic_antibody_treatments.events,source,array,true,synthetic events,Therapeutic-antibody source facts; no weight is defined,pending_review
+patient_profile.previous_transplants.events,source,array,true,synthetic events,Each prior transplant contributes three points,validated
+patient_profile.previous_transplants.rejection_history,source,enum,false,yes|no|unknown|not_applicable,Any prior rejection history adds one point,validated
+patient_profile.car_t_treatments.events,source,array,true,synthetic events,CAR-T source facts; CAR-T and antibody treatments share one combined point,validated
+patient_profile.therapeutic_antibody_treatments.events,source,array,true,synthetic events,Therapeutic-antibody source facts; CAR-T and antibody treatments share one combined point,validated
 patient_profile.source_context,source,object,false,synthetic source facts,Optional HLA and detailed profile context; excluded from scoring and ML features,validated_functional
 patient_profile.source_context.initial_kidney_disease,source,string,false,synthetic source category,Initial kidney disease source fact without inferred score,pending_review
 patient_profile.source_context.donor_type,source,string|null,false,Donneur vivant|Donneur décédé|null,Source donor type kept as non-scored context,pending_review
@@ -37,22 +39,23 @@ serums[].assays[].source_result,source,enum|null,true,negative|positive|doubtful
 current_result_summary.current_source_results,restitution,array,true,negative|positive|doubtful,Distinct source categories on the latest serum,validated_functional
 current_result_summary.current_result,restitution,enum|null,true,negative|positive|doubtful|null,Single source category only when latest-serum results agree,validated_functional
 current_result_summary.status,restitution,enum,true,source_consistent|discordance_unresolved|data_missing,Technical aggregation state without clinical arbitration,validated_functional
-profile.profile_score,restitution,integer|null,true,0-6|null,Full score when every active factor has a defined contribution; otherwise null,partially_validated
-profile.validated_partial_score,restitution,integer,true,0-6,Sum of available contributions from healthcare-professional-validated factors,validated
+profile.profile_score,restitution,integer|null,true,non-negative integer|null,Full score when every scoring criterion has a defined contribution; otherwise null,validated
+profile.validated_partial_score,restitution,integer,true,non-negative integer,Sum of available contributions from healthcare-professional-validated factors,validated
 profile.score_status,restitution,enum,true,partially_calculated|calculated|validated,Calculation state of the full profile score,partially_validated
 profile.proposed_risk_category,restitution,enum,true,minimal|moderate|medium|high|very_high|uncertain,Validated category when the full score is calculable; otherwise uncertain,validated
-profile.context,restitution,object,true,source-preserving context,Non-scored sex dialysis rejection-suspicion and organ facts,validated_functional
-profile.factors[].contribution,restitution,integer|null,true,integer|null,Per-factor contribution; null before validation,pending_review
+profile.context,restitution,object,true,source-preserving context,Source-preserving sex dialysis rejection-suspicion and organ facts; suspicion is also a scored factor,validated_functional
+profile.factors[].contribution,restitution,integer|null,true,integer|null,Per-factor contribution under PROFILE-1.0.0,validated
 profile.missing_data[].path,restitution,string,true,source field path,Explicit location of missing or contradictory data,validated_functional
-history_pattern,restitution,enum,true,negative_constant|positive_constant|doubtful_constant|evolving|fluctuating|indeterminate,Structured longitudinal pattern without clinical conclusion,pending_review
+history_pattern,restitution,enum,true,negative_constant|positive_constant|doubtful_constant|evolving|fluctuating|indeterminate,Qualification needs three prior plus current over three years and successive MFI relative gaps at most 50 percent,pending_review
 trend,restitution,enum,true,increasing|decreasing|stable|indeterminate,Structured trend description,pending_review
 discordances[],restitution,array,true,source-preserving discordance records,Conflicting results on the same serum without automatic arbitration,pending_review
 review_status,restitution,enum,true,human_review_required|candidate_for_simplified_review|blocked,Human workflow state,pending_review
-candidate_for_simplified_review,restitution,boolean,true,false in current ruleset,Simplified-review candidate flag,pending_review
-ruleset_version,restitution,string,true,DEMO-PARTIAL-0.2.0,Version of the partially validated ruleset,validated_functional
+review_route,restitution,enum,true,simplified_review_candidate|supervised_full_dossier_review|manual_biologist_review|mandatory_professional_review_uncertain|discordance_blocked,Explicit review route derived from category and history,validated
+candidate_for_simplified_review,restitution,boolean,true,true|false,Simplified-review candidate flag; human confirmation remains required,validated
+ruleset_version,restitution,string,true,PROFILE-1.0.0,Version of the patient-profile ruleset,validated_functional
 human_validation_required,restitution,boolean,true,true,Human validation safety boundary,validated_functional
 provenance.source_record_copied,both,boolean,true,false,Confirms no source patient record was copied,validated_functional
-provenance.generator_version,both,string,true,manual-fixture-v1|deterministic-generator-v1|balanced-generator-v1|profile-csv-importer-v1|profile-csv-importer-v2|profile-history-generator-v1,Deterministic fixture importer or generator version,validated_functional
+provenance.generator_version,both,string,true,manual-fixture-v1|deterministic-generator-v1|balanced-generator-v1|profile-csv-importer-v1|profile-csv-importer-v2|profile-csv-importer-v3|profile-history-generator-v1,Deterministic fixture importer or generator version,validated_functional
 provenance.simulation_scenario,both,string,false,explicit synthetic stratum,Generation-only coverage label excluded from model features,validated_functional
 provenance.source_dataset,both,string,false,synthetic dataset identifier,Identifies the synthetic profile dataset used by an importer,validated_functional
 provenance.source_patient_id,both,string,false,synthetic source identifier,Stable join to the original synthetic CSV row; excluded from ML features,validated_functional

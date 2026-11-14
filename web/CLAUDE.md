@@ -48,7 +48,7 @@ Dans ce fichier et dans `.claude/rules/`, les chemins `backend/…` et `frontend
 
 ## API
 
-Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vivent sous `/api/<version>` (voir « Versionnement de l'API » dans `.claude/rules/backend.md`). La documentation OpenAPI reste à la racine : `/docs`, `/redoc`, `/openapi.json`.
+Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vivent sous `/api/<version>` (voir « Versionnement de l'API » dans `.claude/rules/backend.md`). La documentation OpenAPI reste à la racine : `/docs`, `/redoc`, `/openapi.json`. Le catalogue des endpoints et le journal des décisions sont dans `doc/` (`api-endpoints.md`, `api-decisions.md`) : les mettre à jour dans la même modification que le code, voir `doc/README.md`.
 
 ### Route publique : résultat d'analyse
 

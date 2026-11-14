@@ -2,7 +2,7 @@
 
 Base URL en local : `http://localhost:8000/api/v1`. Toutes les routes métier vivent sous `/api/v1` ([D-01](api-decisions.md#d-01--versionnement-par-préfixe-apiv1)). Les décisions derrière chaque comportement sont dans [api-decisions.md](api-decisions.md) ; les renvois `D-xx` y mènent.
 
-Dernière mise à jour : 2026-11-14 · 16 opérations.
+Dernière mise à jour : 2026-11-14 · 14 opérations.
 
 ## Vue d'ensemble
 
@@ -28,7 +28,7 @@ Dernière mise à jour : 2026-11-14 · 16 opérations.
 
 ### Listes paginées
 
-Les endpoints de liste (`/patients`, `/synthetic-patients`, `/patients/{id}/synthetic-patients`) renvoient tous la même enveloppe ([D-04](api-decisions.md#d-04--liste-uniforme-pagination-tri-et-filtres-côté-serveur)) :
+Les endpoints de liste (`/patients`, `/synthetic-patients`, `/patients/{id}/synthetic-patients`) renvoient tous la même enveloppe ([D-04](api-decisions.md#d-04--listes-uniformes-paginées-triées-et-filtrées-côté-serveur)) :
 
 ```json
 { "items": [ … ], "total": 51000, "page": 1, "page_size": 20 }
@@ -62,7 +62,7 @@ Les endpoints de liste (`/patients`, `/synthetic-patients`, `/patients/{id}/synt
 | `405` | `{"detail": "Method Not Allowed"}` | Écriture tentée sur une ressource en lecture seule ([D-09](api-decisions.md#d-09--patients-et-patients-synthétiques-en-lecture-seule)) |
 | `422` | `{"detail": [ {loc, msg, type}, … ]}` | Entrée invalide : format de FastAPI, un objet par champ fautif |
 
-Les erreurs métier ont un `detail` **constant et stable** (code en majuscules), à tester côté client ; ne pas dépendre d'un message libre ([D-03](api-decisions.md#d-03--erreurs-métier-un-code-stable-converti-à-un-seul-endroit)).
+Les erreurs métier ont un `detail` **constant et stable** (code en majuscules), à tester côté client ; ne pas dépendre d'un message libre ([D-03](api-decisions.md#d-03--erreurs-métier-à-code-stable-converties-à-un-seul-endroit)).
 
 ---
 
@@ -201,7 +201,7 @@ Liste paginée, en plus de la pagination ci-dessus :
 | `jeu`, `phase`, `statut_parcours`, `organe` | texte, ≤ 100 | Égalité exacte, sans tenir compte de la casse |
 | `sort_by` | `patient_id` \| `date_reference` \| `date_naissance` \| `age` \| `jeu` \| `phase` \| `statut_parcours` \| `statut_date` \| `organe` \| `created_at` | Défaut : `patient_id`. Les colonnes `_…` ne sont **pas** triables |
 
-Réponse `200` : `{items: [SyntheticPatient], total, page, page_size}`. Erreurs : `401`, `422`. Une page de 100 éléments pèse environ 184 Ko ([D-17](api-decisions.md#d-17--taille-de-page-maximale-100)).
+Réponse `200` : `{items: [SyntheticPatient], total, page, page_size}`. Erreurs : `401`, `422`. Une page de 100 éléments pèse environ 179 Ko ([D-17](api-decisions.md#d-17--taille-de-page-plafonnée-à-100)).
 
 ### `GET /patients/{id}/synthetic-patients`
 

@@ -121,7 +121,7 @@ Authentification **email / mot de passe**, implémentée côté backend FastAPI.
 - Le mot de passe n'est jamais stocké ni loggé en clair, ni renvoyé dans une réponse.
 - Implémentée avec [FastAPI Users](https://fastapi-users.github.io/fastapi-users/) : session stockée en base et transportée par un cookie `HttpOnly`, mots de passe hachés en Argon2id (12 à 256 caractères).
 
-Base URL de l'API : `http://localhost:8000/api/v1` (toutes les routes sont préfixées par `/api/<version>`).
+Base URL de l'API : `http://localhost:8000/api/v1` (toutes les routes sont préfixées par `/api/<version>`). Catalogue détaillé des endpoints et journal des décisions : [doc/](doc/README.md).
 
 | Route | Rôle |
 | --- | --- |

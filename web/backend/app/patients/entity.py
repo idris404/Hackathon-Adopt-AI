@@ -30,8 +30,9 @@ class Patient(Base):
     """Table `patients` : identité seulement (aucune donnée clinique).
 
     `patient_id` est l'identifiant fonctionnel unique du patient (« HIS-00355 », la colonne
-    `patient_id` du CSV) ; `id` est sa clé primaire technique. Les patients synthétiques et
-    les tests sériques pointent vers lui par ce `patient_id`, pas par son `id`.
+    `patient_id` du CSV) ; `id` est sa clé primaire technique. Les patients synthétiques,
+    les tests sériques et l'historique d'événements pointent vers lui par ce `patient_id`,
+    pas par son `id`.
     """
 
     __tablename__ = PATIENTS_TABLE_NAME
@@ -54,4 +55,11 @@ class Patient(Base):
         back_populates="patient",
         lazy="raise",
         order_by="SerumTest.test_date",
+    )
+    # `lazy="raise"` : chargement explicite (`selectinload`), trié par date d'événement.
+    history: Mapped[list["PatientHistory"]] = relationship(
+        "PatientHistory",
+        back_populates="patient",
+        lazy="raise",
+        order_by="PatientHistory.occurred_on",
     )

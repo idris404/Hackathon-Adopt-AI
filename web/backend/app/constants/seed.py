@@ -23,8 +23,9 @@ CSV_COLUMN_PATIENT_ID: Final = "patient_id"
 
 
 class SeedStage(StrEnum):
-    """Étapes du seed, dans l'ordre : synthétiques et tests sériques partent des patients."""
+    """Étapes du seed, dans l'ordre : synthétiques, tests sériques et historique partent des patients."""
 
     PATIENTS = "patients"
     SYNTHETIC_PATIENTS = "synthetic"
     SERUM_TESTS = "serum"
+    PATIENT_HISTORY = "history"

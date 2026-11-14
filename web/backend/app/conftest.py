@@ -36,11 +36,13 @@ from app.auth.dependencies import get_access_token_db  # noqa: E402
 from app.constants.analysis import ANALYSIS_ROUTER_PREFIX  # noqa: E402
 from app.constants.auth import AUTH_ROUTER_PREFIX, PASSWORD_MIN_LENGTH  # noqa: E402
 from app.constants.http import API_V1_PREFIX  # noqa: E402
+from app.constants.patient_history import HistoryKind  # noqa: E402
 from app.constants.patients import PATIENTS_ROUTER_PREFIX, Gender  # noqa: E402
 from app.constants.seed import CSV_COLUMN_PATIENT_ID  # noqa: E402
 from app.constants.synthetic_patients import SYNTHETIC_PATIENTS_ROUTER_PREFIX  # noqa: E402
 from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
 from app.main import app  # noqa: E402
+from app.patient_history.entity import PatientHistory  # noqa: E402
 from app.patients.entity import Patient  # noqa: E402
 from app.patients.repository import PatientCriteria  # noqa: E402
 from app.serum_tests.entity import SerumTest
@@ -179,6 +181,7 @@ def make_patient(**overrides: object) -> Patient:
     }
     patient = Patient(**(values | overrides))
     patient.serum_tests = []
+    patient.history = []
     return patient
 
 
@@ -260,8 +263,34 @@ class FakePatientRepository:
         return insert_ignoring_existing(self.stored, values)
 
 
+def make_history_event(patient: Patient, **overrides: object) -> PatientHistory:
+    """Un événement fictif, lié au patient par son `patient_id`."""
+    values: dict[str, object] = {
+        "id": uuid.uuid4(),
+        "patient_id": patient.patient_id,
+        "kind": HistoryKind.GRAFT,
+        "title": "Greffe rénale",
+        "detail": "Donneur décédé · ABO compatible · exemple fictif",
+        "occurred_on": date(2015, 8, 18),
+        "created_at": datetime(2026, 1, 1, tzinfo=timezone.utc),
+    }
+    return PatientHistory(**(values | overrides))
+
+
 class FakeSerumTestRepository:
     """Remplace SerumTestRepository (même principe que FakePatientRepository)."""
+
+    def __init__(self) -> None:
+        self.stored: dict[uuid.UUID, Mapping[str, object]] = {}
+        self.batches: list[int] = []
+
+    async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
+        self.batches.append(len(values))
+        return insert_ignoring_existing(self.stored, values)
+
+
+class FakePatientHistoryRepository:
+    """Remplace PatientHistoryRepository (même principe que FakePatientRepository)."""
 
     def __init__(self) -> None:
         self.stored: dict[uuid.UUID, Mapping[str, object]] = {}

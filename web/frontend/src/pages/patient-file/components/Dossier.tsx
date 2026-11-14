@@ -2,14 +2,7 @@ import { flexRender } from '@tanstack/react-table'
 import type { LegacyReactTable } from '@tanstack/react-table/legacy'
 
 import { mockClinical, type PatientFile, type RenalRow } from '../utils'
-
-function MockChip() {
-  return (
-    <span className="rounded bg-chip px-2 py-0.5 text-[11px] font-medium whitespace-nowrap text-muted">
-      Exemple fictif
-    </span>
-  )
-}
+import { SerumProfile } from './SerumEvolution'
 
 export function Dossier({ file, table }: { file: PatientFile; table: LegacyReactTable<RenalRow> }) {
   return (
@@ -48,9 +41,7 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
           <dl className="grid shrink-0 grid-cols-3 gap-x-8 gap-y-2 text-sm">
             <div>
               <dt className="text-xs text-muted">Groupe sanguin</dt>
-              <dd className="font-medium">
-                {mockClinical.bloodGroup} <MockChip />
-              </dd>
+              <dd className="font-medium">{mockClinical.bloodGroup}</dd>
             </div>
             <div>
               <dt className="text-xs text-muted">{file.organLabel}</dt>
@@ -58,9 +49,7 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
             </div>
             <div>
               <dt className="text-xs text-muted">Référent</dt>
-              <dd className="font-medium">
-                {file.referringDoctor} <MockChip />
-              </dd>
+              <dd className="font-medium">{file.referringDoctor}</dd>
             </div>
           </dl>
         </div>
@@ -96,6 +85,8 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
         </ol>
       )}
 
+      <SerumProfile evolution={file.serumEvolution} />
+
       <div className="grid gap-4 lg:grid-cols-2">
         <article className="rounded-xl border border-line bg-white p-5">
           <header className="flex items-center justify-between">
@@ -113,9 +104,6 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
             <Fact label="Donneur" value={file.donor} />
           </dl>
           <div className="mt-4 rounded-lg bg-metric p-3 text-sm">
-            <div className="mb-2 flex justify-end">
-              <MockChip />
-            </div>
             <p>
               Créatinine / DFGe{' '}
               <strong>
@@ -138,10 +126,7 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
         </article>
 
         <article className="rounded-xl border border-line bg-white p-5">
-          <header className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">02 Données postopératoires</h2>
-            <MockChip />
-          </header>
+          <h2 className="text-base font-semibold">02 Données postopératoires</h2>
           <p className="mt-1 text-xs text-muted">
             {file.postopDateLabel === null ? 'J+7' : `${file.postopDateLabel} · J+7`}
           </p>
@@ -161,10 +146,7 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         <article className="rounded-xl border border-line bg-white p-5">
-          <header className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">Évolution de la fonction rénale</h2>
-            <MockChip />
-          </header>
+          <h2 className="text-base font-semibold">Évolution de la fonction rénale</h2>
           <table className="mt-4 w-full text-left text-sm">
             <thead className="bg-header text-xs text-muted">
               {table.getHeaderGroups().map((group) => (
@@ -193,10 +175,7 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
         </article>
 
         <article className="rounded-xl border border-line bg-white p-5">
-          <header className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">Traitement et vigilance</h2>
-            <MockChip />
-          </header>
+          <h2 className="text-base font-semibold">Traitement et vigilance</h2>
           <ul className="mt-4 flex flex-col gap-3 text-sm">
             {mockClinical.treatments.map((treatment) => (
               <li key={treatment.name}>
@@ -218,15 +197,10 @@ export function Dossier({ file, table }: { file: PatientFile; table: LegacyReact
             {file.consultationDateLabel ?? 'Date inconnue'} · {mockClinical.consultationTime}
           </p>
           <p className="text-sm text-muted">Consultation de néphrologie · J+10</p>
-          <p className="mt-2 text-sm">
-            Bilan prévu : {mockClinical.plannedLabs} <MockChip />
-          </p>
+          <p className="mt-2 text-sm">Bilan prévu : {mockClinical.plannedLabs}</p>
         </article>
         <article className="rounded-xl border border-line bg-white p-5">
-          <header className="flex items-center justify-between">
-            <h2 className="text-base font-semibold">Revue et traçabilité</h2>
-            <MockChip />
-          </header>
+          <h2 className="text-base font-semibold">Revue et traçabilité</h2>
           <p className="mt-3 text-sm text-muted">
             Dernière revue : {file.referringDoctor}
             {file.postopDateLabel ? ` · ${file.postopDateLabel}` : ''}

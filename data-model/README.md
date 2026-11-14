@@ -40,6 +40,7 @@ data-model/
 │   ├── batch_pipeline.py
 │   ├── balanced_generator.py
 │   ├── case_analyzer.py
+│   ├── feature_pipeline.py
 │   ├── generator.py
 │   ├── history_analyzer.py
 │   ├── profile_analyzer.py
@@ -95,6 +96,21 @@ PYTHONPATH=src python3 -m hla_data_model.batch_pipeline \
 
 Invalid records are isolated in the report with their line number and do not
 prevent valid records from being processed.
+
+Build leakage-aware ML artifacts:
+
+```bash
+PYTHONPATH=src python3 -m hla_data_model.feature_pipeline \
+  --sources data/generated/source-cases.jsonl \
+  --restitutions data/generated/restitutions.jsonl \
+  --features data/generated/model-features.csv \
+  --labels data/generated/simulation-labels.csv \
+  --splits data/generated/dataset-splits.csv \
+  --manifest data/generated/feature-manifest.json
+```
+
+Features, simulated labels, and train/validation/test assignments are separate.
+The split is 70/15/15 and stratified by generation scenario for coverage only.
 
 ## Patient profile v0.2
 

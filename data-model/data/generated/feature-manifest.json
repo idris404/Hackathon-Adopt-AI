@@ -1,0 +1,84 @@
+{
+  "clinical_performance_claim_allowed": false,
+  "excluded_from_features": [
+    "case_id",
+    "provenance.*",
+    "simulation_scenario",
+    "profile_score",
+    "risk_category",
+    "history_pattern",
+    "review_route",
+    "ruleset_version",
+    "post_evaluation_data"
+  ],
+  "feature_columns": [
+    "phase",
+    "age_value",
+    "age_missing",
+    "sex_at_birth",
+    "pregnancy_count",
+    "pregnancy_missing",
+    "transfusion_count",
+    "transfusion_frequency",
+    "transfusion_missing",
+    "diabetes_state",
+    "hypertension_state",
+    "autoimmune_disease_state",
+    "dialysis_status",
+    "dialysis_duration_days",
+    "rejection_suspicion_state",
+    "organ_status",
+    "registration_duration_days",
+    "previous_transplant_count",
+    "car_t_treatment_count",
+    "therapeutic_antibody_treatment_count",
+    "profile_unavailable_count",
+    "serum_count",
+    "assay_count",
+    "screening_count",
+    "single_antigen_count",
+    "negative_result_count",
+    "positive_result_count",
+    "doubtful_result_count",
+    "missing_result_count",
+    "same_serum_discordance_count",
+    "result_transition_count",
+    "latest_result",
+    "latest_result_status"
+  ],
+  "feature_schema_version": "0.1.0",
+  "files": {
+    "features": {
+      "name": "model-features.csv",
+      "sha256": "39e41252e5197ee209416114a870a4a71480700d56e40a8a365a99cf7a5626b9"
+    },
+    "labels": {
+      "name": "simulation-labels.csv",
+      "sha256": "73ce3926662f821958525c6d2088b192e095517da1f5c76fe99581eb7223c827"
+    },
+    "splits": {
+      "name": "dataset-splits.csv",
+      "sha256": "0e44937a55a149d691bc1ea88db8dc410b79313fef09cc22afa3d755dcf0733f"
+    }
+  },
+  "join_key": "case_id",
+  "label_columns": [
+    "label_profile_score",
+    "label_risk_category",
+    "label_history_pattern",
+    "label_review_route",
+    "label_blocked",
+    "label_candidate_for_simplified_review",
+    "label_status",
+    "ruleset_version"
+  ],
+  "label_status": "simulation_only",
+  "row_count": 100,
+  "split_counts": {
+    "test": 15,
+    "train": 70,
+    "validation": 15
+  },
+  "split_method": "deterministic_stratification_by_simulation_scenario_for_coverage_only",
+  "split_seed": 20261114
+}

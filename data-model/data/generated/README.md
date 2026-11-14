@@ -18,3 +18,10 @@ The checked dataset uses `balanced-generator-v1`. Its scenario quotas are
 designed to cover product states and must not be presented as real-world
 clinical prevalence. `provenance.simulation_scenario` is generation metadata
 and is prohibited as an ML input feature.
+
+ML preparation produces four additional files:
+
+- `model-features.csv`: pre-evaluation source features only;
+- `simulation-labels.csv`: simulated outputs, kept separate from features;
+- `dataset-splits.csv`: deterministic 70/15/15 assignments;
+- `feature-manifest.json`: schemas, hashes, exclusions, and safety status.

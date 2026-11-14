@@ -37,6 +37,7 @@ data-model/
 │   └── restitution.schema.json
 ├── src/hla_data_model/
 │   ├── generator.py
+│   ├── profile_analyzer.py
 │   └── validator.py
 └── tests/
     └── test_validation.py
@@ -83,6 +84,14 @@ interpretation:
 Sex, dialysis, rejection suspicion, and organ context are copied into the
 restitution as non-scored context. They cannot silently affect the profile
 score. Pregnancy, CAR-T, and therapeutic-antibody rules remain `pending_review`.
+
+## Profile analyzer
+
+`profile_analyzer.py` now builds the complete profile restitution from source
+facts. It creates PF-01 through PF-09, preserves non-scored context, and reports
+missing or contradictory fields. It deliberately returns a null score, an
+`uncertain` category, and null contributions while the medical rules remain
+unvalidated.
 
 The project has no runtime dependency outside the Python standard library.
 

@@ -21,7 +21,7 @@ os.environ.update(
 )
 
 import uuid  # noqa: E402
-from collections.abc import Callable, Iterator  # noqa: E402
+from collections.abc import Callable, Iterator, Mapping, Sequence  # noqa: E402
 from dataclasses import dataclass, field  # noqa: E402
 from datetime import datetime, timezone  # noqa: E402
 from typing import Any  # noqa: E402
@@ -34,8 +34,11 @@ from app.auth.dependencies import get_access_token_db  # noqa: E402
 from app.constants.analysis import ANALYSIS_ROUTER_PREFIX  # noqa: E402
 from app.constants.auth import AUTH_ROUTER_PREFIX, PASSWORD_MIN_LENGTH  # noqa: E402
 from app.constants.http import API_V1_PREFIX  # noqa: E402
+from app.constants.patients import PATIENTS_ROUTER_PREFIX  # noqa: E402
 from app.constants.users import USERS_ROUTER_PREFIX  # noqa: E402
 from app.main import app  # noqa: E402
+from app.patients.entity import Patient  # noqa: E402
+from app.patients.repository import PatientCriteria  # noqa: E402
 from app.users.dependencies import get_user_db  # noqa: E402
 
 # https : le cookie de session est `Secure`, le client de test ne le renvoie qu'en https.
@@ -45,6 +48,7 @@ TEST_BASE_URL = "https://testserver"
 AUTH_URL = f"{API_V1_PREFIX}{AUTH_ROUTER_PREFIX}"
 USERS_URL = f"{API_V1_PREFIX}{USERS_ROUTER_PREFIX}"
 ANALYSIS_URL = f"{API_V1_PREFIX}{ANALYSIS_ROUTER_PREFIX}"
+PATIENTS_URL = f"{API_V1_PREFIX}{PATIENTS_ROUTER_PREFIX}"
 
 
 @dataclass
@@ -130,6 +134,32 @@ class FakeAccessTokenDatabase:
             for token, access_token in self.tokens.items()
             if access_token.user_id != user_id
         }
+
+
+class FakePatientRepository:
+    """Remplace PatientRepository. Ne filtre ni ne trie : la requête SQL est testée à part
+    (`patients/test_repository.py`). Garde le dernier critère reçu pour vérifier le mapping."""
+
+    def __init__(self, patients: list[Patient] | None = None) -> None:
+        self.patients: list[Patient] = patients or []
+        self.total: int | None = None  # None : le nombre de patients fournis
+        self.last_criteria: PatientCriteria | None = None
+        self.stored: dict[uuid.UUID, Mapping[str, object]] = {}
+        self.batches: list[int] = []
+
+    async def find(self, criteria: PatientCriteria) -> tuple[list[Patient], int]:
+        self.last_criteria = criteria
+        return self.patients, len(self.patients) if self.total is None else self.total
+
+    async def get_by_id(self, patient_id: uuid.UUID) -> Patient | None:
+        return next((patient for patient in self.patients if patient.id == patient_id), None)
+
+    async def add_many_ignoring_existing(self, values: Sequence[Mapping[str, object]]) -> int:
+        """Comme `ON CONFLICT DO NOTHING` : ce qui existe déjà n'est pas réinséré."""
+        self.batches.append(len(values))
+        new = {value["id"]: value for value in values if value["id"] not in self.stored}
+        self.stored.update(new)
+        return len(new)
 
 
 @pytest.fixture

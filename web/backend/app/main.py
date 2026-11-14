@@ -11,7 +11,10 @@ from app.auth.router import router as auth_router
 from app.constants.auth import INVALID_CREDENTIALS_CODE
 from app.constants.http import API_V1_PREFIX, CORS_ALLOWED_HEADERS, CORS_ALLOWED_METHODS
 from app.core.config import get_settings
+from app.constants.patients import PATIENT_NOT_FOUND_CODE
 from app.core.database import Base, engine
+from app.patients.exceptions import PatientNotFoundError
+from app.patients.router import router as patients_router
 from app.users.router import router as users_router
 
 
@@ -35,6 +38,13 @@ async def handle_invalid_credentials(_: Request, __: InvalidCredentialsError) ->
     )
 
 
+@app.exception_handler(PatientNotFoundError)
+async def handle_patient_not_found(_: Request, __: PatientNotFoundError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_404_NOT_FOUND, content={"detail": PATIENT_NOT_FOUND_CODE}
+    )
+
+
 # Le cookie de session circule entre le frontend et l'API : origine explicite, jamais "*".
 app.add_middleware(
     CORSMiddleware,
@@ -49,5 +59,6 @@ api_v1_router = APIRouter(prefix=API_V1_PREFIX)
 api_v1_router.include_router(auth_router)
 api_v1_router.include_router(users_router)
 api_v1_router.include_router(analysis_router)
+api_v1_router.include_router(patients_router)
 
 app.include_router(api_v1_router)

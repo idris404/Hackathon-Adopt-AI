@@ -44,7 +44,6 @@ export const MOCK_CONSULTATION_TIME = '09:00'
 export const MOCK_PLANNED_LABS = 'créatinine, ionogramme, NFS et tacrolimus C0'
 export const MOCK_NAV_COUNTS = {
   patients: 128,
-  validation: 12,
   doubtful: 5,
 } as const
 

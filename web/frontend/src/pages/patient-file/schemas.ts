@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '../../constants/auth'
 import { GENDERS } from '../../constants/patient-file'
+import { serumEvolutionSchema } from '../../shared/schemas/serum'
 
 const genderSchema = z.enum(GENDERS)
 
@@ -21,25 +22,6 @@ const serumTestSchema = z.object({
   dq10: z.number(),
   dq10_output: z.number(),
   profile: z.string(),
-})
-
-const serumAntigenSchema = z.object({
-  code: z.string(),
-  label: z.string(),
-  value: z.number(),
-  output: z.union([z.literal(0), z.literal(1)]),
-})
-
-export const serumEvolutionSchema = z.object({
-  profile: z.enum(['A', 'B', 'C']).nullable(),
-  label: z.string().nullable(),
-  years: z.array(
-    z.object({
-      year: z.number().int(),
-      test_date: z.iso.date(),
-      antigens: z.array(serumAntigenSchema),
-    }),
-  ),
 })
 
 export const patientSchema = z.object({
@@ -81,6 +63,5 @@ export const loginSchema = z.object({
 })
 
 export type PatientResponse = z.infer<typeof patientSchema>
-export type SerumEvolution = z.infer<typeof serumEvolutionSchema>
 export type SyntheticPatientResponse = z.infer<typeof syntheticPatientSchema>
 export type LoginValues = z.infer<typeof loginSchema>

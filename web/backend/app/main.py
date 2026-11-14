@@ -15,6 +15,9 @@ from app.constants.patients import PATIENT_NOT_FOUND_CODE
 from app.core.database import Base, engine
 from app.patients.exceptions import PatientNotFoundError
 from app.patients.router import router as patients_router
+from app.constants.signatures import PATIENT_ALREADY_SIGNED_CODE
+from app.signatures.exceptions import PatientAlreadySignedError
+from app.signatures.router import router as signatures_router
 from app.synthetic_patients.router import patient_router as patient_synthetic_patients_router
 from app.synthetic_patients.router import router as synthetic_patients_router
 from app.users.router import router as users_router
@@ -47,6 +50,13 @@ async def handle_patient_not_found(_: Request, __: PatientNotFoundError) -> JSON
     )
 
 
+@app.exception_handler(PatientAlreadySignedError)
+async def handle_patient_already_signed(_: Request, __: PatientAlreadySignedError) -> JSONResponse:
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT, content={"detail": PATIENT_ALREADY_SIGNED_CODE}
+    )
+
+
 # Le cookie de session circule entre le frontend et l'API : origine explicite, jamais "*".
 app.add_middleware(
     CORSMiddleware,
@@ -64,5 +74,6 @@ api_v1_router.include_router(analysis_router)
 api_v1_router.include_router(patients_router)
 api_v1_router.include_router(synthetic_patients_router)
 api_v1_router.include_router(patient_synthetic_patients_router)
+api_v1_router.include_router(signatures_router)
 
 app.include_router(api_v1_router)

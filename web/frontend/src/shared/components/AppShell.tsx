@@ -5,9 +5,9 @@ import { MOCK_NAV_COUNTS } from '../../constants/patient-file'
 import { ROUTES } from '../../constants/routes'
 import { useCurrentUser } from '../hooks/useCurrentUser'
 import { useLogout } from '../hooks/useLogout'
+import { useSignQueue } from '../hooks/useSignQueue'
 
 const placeholders = [
-  { label: 'Validation', count: MOCK_NAV_COUNTS.validation, alert: false },
   { label: 'Résultats douteux', count: MOCK_NAV_COUNTS.doubtful, alert: true },
   { label: 'Historique', count: null, alert: false },
   { label: 'Paramètres', count: null, alert: false },
@@ -33,6 +33,7 @@ function Count({ count, alert }: { count: number; alert: boolean }) {
 
 export function AppShell({ children, section }: { children: ReactNode; section: string }) {
   const { data: user } = useCurrentUser()
+  const { data: signQueue } = useSignQueue()
   const { logout, isPending, errorMessage } = useLogout()
 
   return (
@@ -59,6 +60,10 @@ export function AppShell({ children, section }: { children: ReactNode; section: 
             <span>Liste des patients</span>
             <Count count={MOCK_NAV_COUNTS.patients} alert={false} />
           </Link>
+          <NavLink to={ROUTES.toSign} className={({ isActive }) => itemClass(isActive)}>
+            <span>À signer</span>
+            {signQueue === undefined ? null : <Count count={signQueue.remaining} alert={false} />}
+          </NavLink>
           {placeholders.map((item) => (
             <div key={item.label} className={itemClass(false)}>
               <span>{item.label}</span>

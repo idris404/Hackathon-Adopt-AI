@@ -1,5 +1,5 @@
 import { env } from '../../app/env'
-import { API_ENDPOINTS } from '../../constants/api'
+import { API_ENDPOINTS, API_V1_PREFIX } from '../../constants/api'
 import {
   CONSULTATION_DAY_OFFSET,
   GENDER_LABELS,
@@ -77,7 +77,7 @@ export async function getSyntheticPatient(id: string): Promise<SyntheticPatientR
 }
 
 export async function login(email: string, password: string): Promise<void> {
-  const response = await fetch(`${env.VITE_API_URL}${API_ENDPOINTS.login}`, {
+  const response = await fetch(`${env.VITE_API_URL}${API_V1_PREFIX}${API_ENDPOINTS.login}`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

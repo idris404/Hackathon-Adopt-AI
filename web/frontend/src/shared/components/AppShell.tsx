@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
 
-import { MOCK_NAV_COUNTS, MOCK_REFERRING_DOCTOR } from '../../constants/patient-file'
+import { MOCK_NAV_COUNTS } from '../../constants/patient-file'
 import { ROUTES } from '../../constants/routes'
+import { useCurrentUser } from '../hooks/useCurrentUser'
+import { useLogout } from '../hooks/useLogout'
 
 const placeholders = [
   { label: 'Validation', count: MOCK_NAV_COUNTS.validation, alert: false },
@@ -30,6 +32,9 @@ function Count({ count, alert }: { count: number; alert: boolean }) {
 }
 
 export function AppShell({ children, section }: { children: ReactNode; section: string }) {
+  const { data: user } = useCurrentUser()
+  const { logout, isPending, errorMessage } = useLogout()
+
   return (
     <div className="flex min-h-screen bg-canvas font-sans text-ink">
       <aside className="flex w-[232px] shrink-0 flex-col bg-sidebar px-4 py-5 text-sidebar-text">
@@ -74,13 +79,23 @@ export function AppShell({ children, section }: { children: ReactNode; section: 
             Transplantation rénale <span className="px-2 text-line">/</span> {section}
           </p>
           <div className="flex shrink-0 items-center gap-4 text-sm">
+            {errorMessage ? (
+              <p role="alert" className="text-xs text-amber">
+                {errorMessage}
+              </p>
+            ) : null}
             <span className="rounded-full bg-mint-ice px-3 py-1 text-xs font-medium whitespace-nowrap text-success">
               Session sécurisée
             </span>
-            <span className="text-right whitespace-nowrap">
-              <span className="block font-medium">{MOCK_REFERRING_DOCTOR}</span>
-              <span className="block text-xs text-muted">Médecin coordinateur</span>
-            </span>
+            <span className="whitespace-nowrap text-right text-xs text-muted">{user?.email}</span>
+            <button
+              type="button"
+              onClick={logout}
+              disabled={isPending}
+              className="rounded-lg border border-button-line bg-white px-3 py-2 text-sm disabled:opacity-60"
+            >
+              Déconnexion
+            </button>
           </div>
         </header>
         <main className="flex-1 px-8 py-6">{children}</main>

@@ -1,5 +1,14 @@
 # Contexte du projet
 
+## Problématique
+
+Retourner les résultats d'analyse effectués par le logiciel **Lymfip** (<https://www.lymhoe.com/connexions-lymfip>) et **supprimer l'analyse manuelle** que font les biochimistes lorsqu'ils obtiennent le retour du logiciel.
+
+- Lymfip est utilisé en laboratoire pour le suivi des patients en attente de greffe. Il est connecté aux automates et aux logiciels métiers du laboratoire, et ses comptes rendus validés sont transmis aux équipes de greffe.
+- Ce sont des **données de santé** : les traiter comme sensibles (jamais dans les logs, jamais en dur dans le code ou les tests, accès protégé par l'authentification).
+- **Ne rien inventer sur Lymfip.** Le format de ses résultats, la manière de les obtenir (API, fichier, autre) et les règles d'analyse ne sont pas encore connus. Tant qu'ils ne sont pas fournis, ne pas supposer de schéma de données ni de règle métier : poser la question.
+- Points encore ouverts : comment l'application récupère les résultats, qui les consulte et sous quelle forme, qui les valide une fois l'étape manuelle supprimée. Voir « Problématique » dans `README.md`.
+
 ## Architecture
 
 Monorepo avec deux applications séparées (dans `web/`), plus les dépendances d'infrastructure, situées à la **racine du dépôt**, à côté de `web/` :

@@ -4,6 +4,27 @@ Application web du projet **Hackathon Adopt AI** : une API Python (FastAPI), une
 
 > **État du projet** : socle posé (architecture, conventions, agents Claude). Le backend a son authentification (voir plus bas) ; le reste du backend et le frontend restent à écrire.
 
+## Problématique
+
+**Retourner les résultats d'analyse effectués par le logiciel [Lymfip](https://www.lymhoe.com/connexions-lymfip) et supprimer l'analyse manuelle que font les biochimistes lorsqu'ils obtiennent le retour du logiciel.**
+
+Contexte, d'après la page des connexions de Lymfip :
+
+- Lymfip est utilisé en laboratoire pour le suivi des patients en attente de greffe. Il est connecté aux automates et aux logiciels métiers du laboratoire.
+- Les comptes rendus validés sont transmis aux équipes de greffe via un module d'accès à distance.
+- Il échange aussi avec le CHU (création des dossiers patients, facturation) et avec l'ABM pour Cristal (Syrenad à venir) pour les données des patients en attente de greffe.
+
+Objectif de l'application :
+
+1. Récupérer les résultats d'analyse retournés par Lymfip.
+2. Les restituer directement, sans que les biochimistes aient à les analyser à la main.
+
+À clarifier :
+
+- Comment l'application obtient les résultats de Lymfip : la page ne décrit ni API ni format de données.
+- Qui consulte les résultats restitués (biochimistes, équipes de greffe, …) et sous quelle forme.
+- Qui valide les résultats une fois l'étape manuelle supprimée : la page parle de comptes rendus « validés » avant leur transmission aux équipes de greffe.
+
 ## Architecture
 
 ```

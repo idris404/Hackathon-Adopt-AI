@@ -1,0 +1,108 @@
+# Web — Hackathon Adopt AI
+
+Application web du projet **Hackathon Adopt AI** : une API Python (FastAPI), une SPA React et une base PostgreSQL, dans un même monorepo.
+
+> **État du projet** : socle posé (architecture, conventions, agents Claude). Le code de `backend/` et `frontend/` reste à écrire.
+
+## Architecture
+
+```
+web/
+├── backend/        # API Python (FastAPI)
+├── frontend/       # SPA Vite + React + TypeScript
+└── dependencies/   # Docker Compose (PostgreSQL), volume de données ignoré par git
+```
+
+Le backend et le frontend ne partagent aucun code. Le contrat entre les deux est l'API HTTP : schémas **Pydantic** côté serveur, schémas **Zod** côté client.
+
+## Stack
+
+| Couche | Technologies |
+| --- | --- |
+| Backend | Python, FastAPI, SQLAlchemy (ORM), Pydantic, gestion des dépendances avec **uv** |
+| Frontend | Vite, React, TypeScript strict, Zod, React Hook Form, TanStack Query, TanStack Table |
+| Base de données | PostgreSQL (Docker Compose) |
+| Tests | Backend : pytest. Frontend : Vitest (unitaires) et Playwright (e2e) |
+
+## Prérequis
+
+- [Docker](https://docs.docker.com/get-docker/) (pour PostgreSQL)
+- [uv](https://docs.astral.sh/uv/) (backend Python)
+- [Node.js](https://nodejs.org/) et npm (frontend)
+
+## Démarrage
+
+### 1. Configuration
+
+Les URLs de connexion et les secrets passent par les variables d'environnement. `.env` n'est jamais commité, `.env.example` documente les variables attendues.
+
+```bash
+cp .env.example .env
+```
+
+### 2. Lancer le projet
+
+| Action | Commande | Dossier |
+| --- | --- | --- |
+| PostgreSQL | `docker compose -f ./dependencies/compose.yml up -d` | `web/` |
+| Backend | `uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000` | `web/backend/` |
+| Frontend | `npm run dev -- --strictPort` | `web/frontend/` |
+
+- Backend : <http://localhost:8000> (documentation OpenAPI sur `/docs`)
+- Frontend : <http://localhost:5173>
+
+Dans VS Code, le lancement `backend + frontend` de [.vscode/launch.json](.vscode/launch.json) démarre les deux applications ensemble.
+
+## Authentification
+
+Authentification **email / mot de passe**, implémentée côté backend FastAPI.
+
+- Le backend est la source de vérité. La validation Zod côté frontend aide l'utilisateur mais ne garantit rien : le backend revalide toujours avec Pydantic.
+- Le mot de passe n'est jamais stocké ni loggé en clair, ni renvoyé dans une réponse.
+
+## Conventions de code
+
+Le détail complet est dans [.claude/rules/](.claude/rules/). L'essentiel :
+
+**Backend** ([backend.md](.claude/rules/backend.md))
+- DDD simplifié : un dossier par contexte métier (`users`, `auth`, …) avec `entity`, `schemas`, `repository`, `services`, `router`.
+- Flux de dépendance unique : `router → services → repository → entity`.
+- Chaque route déclare un schéma d'entrée et un `response_model`. On ne renvoie jamais une entité SQLAlchemy.
+- Filtrage, tri et pagination des listes côté backend.
+- Principes SOLID, dépendances injectées par le constructeur via `Depends`.
+
+**Frontend** ([frontend.md](.claude/rules/frontend.md))
+- Un dossier par page ; le code partagé va dans `shared/`.
+- Séparation stricte : la présentation (JSX) d'un côté, un hook par logique métier de l'autre.
+- Formulaires avec React Hook Form et `zodResolver`.
+- Toute réponse d'API est parsée avec Zod avant usage.
+- Tous les appels API passent par TanStack Query, tous les tableaux par TanStack Table (filtrage, tri et pagination côté backend).
+
+**Commun**
+- **Aucune valeur en dur** : toute valeur qui porte un sens est une constante de `backend/app/constants/` ou `frontend/src/constants/`. Ce qui change selon l'environnement et les secrets vont dans `.env`.
+- Ne jamais commiter de secrets (`.env`, `.venv`, `node_modules`, `dependencies/volume` sont dans le `.gitignore`).
+- Design et UI : voir [DESIGN.md](DESIGN.md).
+
+## Tests
+
+| Périmètre | Outil | Emplacement |
+| --- | --- | --- |
+| Backend (services, routes, repositories) | pytest | `backend/app/<contexte>/test_*.py` |
+| Frontend (utils, schémas, hooks, composants) | Vitest | à côté du fichier testé |
+| Frontend (parcours critiques) | Playwright | `frontend/e2e/<contexte>.spec.ts` |
+
+Scripts attendus dans `frontend/package.json` : `test`, `test:coverage`, `test:e2e`. Les tests e2e tournent contre le vrai backend avec une base de données de test dédiée.
+
+## Travailler avec Claude Code
+
+Le dossier [.claude/](.claude/) configure des sous-agents spécialisés qui appliquent les règles du projet :
+
+| Agent | Rôle |
+| --- | --- |
+| `backend-developer` | Code backend : contexte métier, entité, schéma, repository, service, route |
+| `backend-auth` | Authentification email / mot de passe et sécurité associée |
+| `backend-tester` | Tests backend avec pytest |
+| `frontend-developer` | Code frontend : page, composant, hook, formulaire, tableau |
+| `frontend-tester` | Tests frontend avec Vitest et Playwright |
+
+Les skills `security-audit` et `ui-ux-pro-max` sont utilisés respectivement pour la sécurité et l'interface. Les skills Better Auth (`create-auth`, …) ciblent une stack TypeScript et ne s'appliquent pas à ce projet.
